@@ -242,6 +242,14 @@ app.post('/api/visitors/:id/clear', (req, res) => {
   res.json({ success: true });
 });
 
+// Delete Visitor Completely
+app.delete('/api/visitors/:id', (req, res) => {
+  cancelVisitorFlow(req.params.id);
+  storage.deleteVisitor(req.params.id);
+  io.to('admin_room').emit('visitor:deleted', { visitorId: req.params.id });
+  res.json({ success: true });
+});
+
 // Toggle Bot for Visitor
 app.post('/api/visitors/:id/toggle-bot', (req, res) => {
   const { botPaused } = req.body;

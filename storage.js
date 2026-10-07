@@ -421,6 +421,16 @@ class Storage {
     }
     return true;
   }
+
+  deleteVisitor(visitorId) {
+    if (this.visitors[visitorId]) {
+      delete this.visitors[visitorId];
+      writeJSON(VISITORS_FILE, this.visitors);
+    }
+    this.messages = this.messages.filter(m => m.visitorId !== visitorId);
+    writeJSON(MESSAGES_FILE, this.messages);
+    return true;
+  }
 }
 
 const storage = new Storage();

@@ -13,9 +13,15 @@
     localStorage.setItem('wa_visitor_id', visitorId);
   }
 
-  // Parse UTM / Ads Source
   const urlParams = new URLSearchParams(window.location.search);
   const utmSource = urlParams.get('utm_source') || urlParams.get('source') || (document.referrer ? 'Referrer: ' + new URL(document.referrer).hostname : 'Direct Traffic');
+
+  // Clean and hide tracking query parameters from address bar for a neat appearance
+  if (window.history && window.history.replaceState && window.location.search) {
+    try {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } catch (e) {}
+  }
 
   let socket = null;
   let settings = {};

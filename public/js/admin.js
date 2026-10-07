@@ -40,6 +40,8 @@
   const toggleVisitorBotBtn = document.getElementById('toggleVisitorBotBtn');
   const quickTriggerFlowSelect = document.getElementById('quickTriggerFlowSelect');
   const clearChatBtn = document.getElementById('clearChatBtn');
+  const deleteVisitorBtn = document.getElementById('deleteVisitorBtn');
+  const detailDeleteVisitorBtn = document.getElementById('detailDeleteVisitorBtn');
   const adminChatFeed = document.getElementById('adminChatFeed');
   const chatPaneFooter = document.getElementById('chatPaneFooter');
   const adminMessageInput = document.getElementById('adminMessageInput');
@@ -178,6 +180,14 @@
     socket.on('visitor:cleared', ({ visitorId }) => {
       if (activeVisitorId === visitorId) {
         adminChatFeed.innerHTML = '';
+      }
+    });
+
+    socket.on('visitor:deleted', ({ visitorId }) => {
+      visitors = visitors.filter(v => v.id !== visitorId);
+      renderVisitorList();
+      if (activeVisitorId === visitorId) {
+        resetChatView();
       }
     });
   }
@@ -364,6 +374,55 @@
       console.error(e);
     }
   });
+
+  // --- Reset Chat View Helper ---
+  function resetChatView() {
+    activeVisitorId = null;
+    chatHeaderActions.style.display = 'none';
+    chatPaneFooter.style.display = 'none';
+    activeVisitorName.textContent = 'Select a conversation';
+    activeVisitorPhone.textContent = 'No phone';
+    activeVisitorSource.textContent = '';
+    activeVisitorLeadBadge.style.display = 'none';
+    activeVisitorDot.className = 'online-dot';
+    adminChatFeed.innerHTML = `
+      <div class="select-hint">
+        <div class="hint-icon">💬</div>
+        <h3>Select a conversation from the sidebar</h3>
+        <p>Monitor real-time visitors, view automated sales funnels, and take over chats live.</p>
+      </div>
+    `;
+    const inboxContainer = document.querySelector('.inbox-container');
+    if (inboxContainer) inboxContainer.classList.remove('chat-open');
+    if (detailsPane) detailsPane.classList.remove('open');
+    if (detailsBackdrop) detailsBackdrop.classList.remove('open');
+  }
+
+  // --- Delete Visitor Completely ---
+  async function handleDeleteVisitor() {
+    if (!activeVisitorId) return;
+    const vis = visitors.find(v => v.id === activeVisitorId);
+    const visName = vis ? (vis.name || vis.id) : activeVisitorId;
+
+    if (!confirm(`Are you sure you want to permanently delete "${visName}" and all their messages?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/visitors/${activeVisitorId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        visitors = visitors.filter(v => v.id !== activeVisitorId);
+        resetChatView();
+        renderVisitorList();
+      }
+    } catch (err) {
+      alert('Error deleting visitor: ' + err.message);
+    }
+  }
+
+  if (deleteVisitorBtn) deleteVisitorBtn.addEventListener('click', handleDeleteVisitor);
+  if (detailDeleteVisitorBtn) detailDeleteVisitorBtn.addEventListener('click', handleDeleteVisitor);
 
   // --- Save Lead Details ---
   saveLeadDetailsBtn.addEventListener('click', async () => {
