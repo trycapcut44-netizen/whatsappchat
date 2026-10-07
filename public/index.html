@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#075e54">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>WhatsApp Business</title>
+  
+  <!-- PWA & Mobile App Meta Tags -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WA Business">
+  <meta name="application-name" content="WhatsApp Business">
+  <meta name="msapplication-TileColor" content="#075e54">
+  <meta name="msapplication-TileImage" content="/assets/icon-192.png">
+
+  <!-- Preconnect and Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Socket.io client -->
+  <script src="/socket.io/socket.io.js"></script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/css/chat.css">
+</head>
+<body>
+
+  <!-- Chat Screen Wrapper -->
+  <div class="chat-container">
+
+    <!-- PWA Install Prompt Banner -->
+    <div class="pwa-install-banner" id="pwaInstallBanner" style="display: none;">
+      <div class="pwa-banner-left">
+        <img src="/assets/icon-192.png" alt="App Icon" class="pwa-app-icon">
+        <div class="pwa-banner-text">
+          <strong>WhatsApp Business</strong>
+          <span>Install app on home screen</span>
+        </div>
+      </div>
+      <div class="pwa-banner-actions">
+        <button class="btn-pwa-install" id="pwaInstallBtn">Install App</button>
+        <button class="btn-pwa-dismiss" id="pwaDismissBtn" aria-label="Dismiss">&times;</button>
+      </div>
+    </div>
+
+    <!-- WhatsApp Top Header -->
+    <header class="chat-header">
+      <div class="header-left">
+        <button class="btn-icon back-btn" aria-label="Back">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+          </svg>
+        </button>
+        <div class="header-avatar-container">
+          <img src="/assets/whatsapp-business.svg" alt="WhatsApp Business" id="headerAvatar" class="header-avatar">
+          <span class="online-indicator"></span>
+        </div>
+        <div class="header-info">
+          <div class="agent-title-row">
+            <h1 class="agent-name" id="headerAgentName">WhatsApp Business</h1>
+            <svg class="verified-badge" viewBox="0 0 16 16" width="14" height="14" fill="#25D366">
+              <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.99-4.99a.75.75 0 0 0-.01-1.05z"/>
+            </svg>
+          </div>
+          <p class="agent-status" id="headerAgentStatus">
+            <span class="status-dot"></span> <span id="statusText">online</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button class="btn-icon" aria-label="Video Call" title="Video Call">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/>
+          </svg>
+        </button>
+        <button class="btn-icon" aria-label="Audio Call" title="Audio Call">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor">
+            <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-2.2 2.2a15.053 15.053 0 0 1-6.59-6.59l2.2-2.21a.96.96 0 0 0 .25-1A11.36 11.36 0 0 1 8.5 3.99c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.49c0-.55-.45-1-1-.12z"/>
+          </svg>
+        </button>
+        <button class="btn-icon" id="menuToggleBtn" aria-label="More Options" title="More Options">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Encryption Notice Banner -->
+    <div class="encryption-notice">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+      </svg>
+      <span>Messages are end-to-end encrypted. Tap to verify.</span>
+    </div>
+
+    <!-- Chat Messages Flow Container -->
+    <main class="chat-feed" id="chatFeed">
+      <!-- Date pill -->
+      <div class="date-divider">
+        <span>TODAY</span>
+      </div>
+
+      <!-- Messages dynamically appended here -->
+    </main>
+
+    <!-- Typing Indicator Bubble in Feed -->
+    <div class="typing-bubble-container" id="typingIndicator" style="display: none;">
+      <div class="typing-bubble">
+        <span class="typing-label" id="typingStatusLabel">typing</span>
+        <div class="typing-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Lead Capture Modal / Banner -->
+    <div class="phone-prompt-card" id="phonePromptCard" style="display: none;">
+      <button class="prompt-close-btn" id="closePhonePrompt" aria-label="Close">&times;</button>
+      <div class="prompt-content">
+        <div class="prompt-icon">💬</div>
+        <div class="prompt-text">
+          <p class="prompt-title">Never lose your chat & exclusive offer!</p>
+          <p class="prompt-desc" id="phonePromptDesc">Enter your WhatsApp/Phone number so we can reach you:</p>
+        </div>
+      </div>
+      <form class="prompt-form" id="phonePromptForm">
+        <div class="phone-input-wrap">
+          <span class="phone-prefix">📞</span>
+          <input type="tel" id="promptPhoneInput" placeholder="e.g. +1 234 567 890" required autocomplete="tel">
+        </div>
+        <button type="submit" class="prompt-submit-btn">Save Number</button>
+      </form>
+    </div>
+
+    <!-- Quick Reply Chips Bar -->
+    <div class="quick-replies-bar" id="quickRepliesBar">
+      <!-- Dynamically generated quick reply chips -->
+    </div>
+
+    <!-- Chat Input Section -->
+    <footer class="chat-input-bar">
+      <div class="input-container">
+        <button class="btn-icon emoji-btn" id="emojiBtn" aria-label="Emoji" title="Emoji">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="#8696a0">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+          </svg>
+        </button>
+
+        <textarea 
+          id="messageInput" 
+          rows="1" 
+          placeholder="Message" 
+          aria-label="Type a message"
+          autocomplete="off"></textarea>
+
+        <button class="btn-icon attach-btn" id="attachBtn" aria-label="Attach File" title="Send Photo/Screenshot">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="#8696a0">
+            <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5V6H9v9.5a3 3 0 0 0 6 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
+          </svg>
+        </button>
+        <input type="file" id="fileInput" accept="image/*,video/*" style="display: none;">
+      </div>
+
+      <!-- Action Button (Mic or Send) -->
+      <button class="send-action-btn" id="sendBtn" aria-label="Send Message" title="Send">
+        <!-- Default Send Icon -->
+        <svg class="send-icon" viewBox="0 0 24 24" width="22" height="22" fill="#FFFFFF">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
+    </footer>
+
+  </div>
+
+  <!-- Fullscreen Lightbox for Media -->
+  <div class="media-lightbox" id="mediaLightbox" style="display: none;">
+    <button class="lightbox-close-btn" id="closeLightbox">&times;</button>
+    <div class="lightbox-body" id="lightboxBody"></div>
+  </div>
+
+  <script src="/js/chat.js"></script>
+</body>
+</html>

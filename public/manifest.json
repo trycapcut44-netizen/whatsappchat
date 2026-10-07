@@ -1,0 +1,32 @@
+{
+  "name": "WhatsApp Business",
+  "short_name": "WA Business",
+  "description": "WhatsApp Business Live Chat & Instant Support",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#efeae2",
+  "theme_color": "#075e54",
+  "orientation": "portrait-primary",
+  "categories": ["business", "shopping", "social"],
+  "icons": [
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/whatsapp-business.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="wbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#25D366" />
+      <stop offset="100%" stop-color="#128C7E" />
+    </linearGradient>
+  </defs>
+  <!-- Background Circle -->
+  <circle cx="60" cy="60" r="58" fill="url(#wbGrad)" />
+  
+  <!-- Subtle inner border -->
+  <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2" />
+  
+  <!-- WhatsApp Bubble Contour -->
+  <path d="M60 18 C36.8 18 18 36.8 18 60 C18 68.2 20.4 75.9 24.6 82.4 L20.5 98.5 L37.2 94.2 C43.8 98 51.6 100.2 60 100.2 C83.2 100.2 102 81.4 102 60 C102 36.8 83.2 18 60 18 Z" fill="#25D366" stroke="#FFFFFF" stroke-width="3.5"/>
+
+  <!-- Bold White 'B' Letter for WhatsApp Business -->
+  <path d="M46 36 L64 36 C73 36 78 40.5 78 47 C78 51.5 75 55 69.5 56.5 C76.5 58 80.5 62.5 80.5 69.5 C80.5 77 74.5 82 64 82 L46 82 Z M55 44 L55 54 L62.5 54 C67 54 69.5 52 69.5 49 C69.5 46 67 44 62.5 44 Z M55 62 L55 74 L64 74 C69 74 71.5 71.5 71.5 68 C71.5 64.5 69 62 64 62 Z" fill="#FFFFFF" />
+  
+  <!-- Official Verified Green Badge -->
+  <circle cx="95" cy="95" r="14" fill="#075E54" stroke="#FFFFFF" stroke-width="2.5"/>
+  <path d="M90 95 L93.5 98.5 L100 92" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

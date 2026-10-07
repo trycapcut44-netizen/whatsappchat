@@ -1,0 +1,15 @@
+{
+  "brandName": "Asad",
+  "brandStatus": "Online",
+  "brandSubtitle": "Official Business Account",
+  "brandAvatar": "/uploads/file-1791404933496-954088728.jpeg",
+  "botActive": false,
+  "soundEnabled": true,
+  "phonePromptEnabled": true,
+  "phonePromptMessage": "💬 In case our chat gets interrupted, please share your WhatsApp or Mobile number so we can reach you:",
+  "phonePromptDelay": 12,
+  "autoWelcome": true,
+  "welcomeDelay": 2,
+  "fallbackMessage": "Thanks for your message! Our specialist is reviewing your inquiry and will reply in a moment. You can also pick an option below 👇",
+  "adminPin": "1234"
+}

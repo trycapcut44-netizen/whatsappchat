@@ -1,0 +1,160 @@
+[
+  {
+    "id": "flow_welcome",
+    "name": "👋 Welcome Funnel (New Visitors)",
+    "triggerType": "welcome",
+    "keywords": [
+      "hi",
+      "hello",
+      "hey",
+      "start",
+      "salam",
+      "menu"
+    ],
+    "enabled": true,
+    "steps": [
+      {
+        "id": "step_w1",
+        "delay": 2,
+        "type": "text",
+        "content": "Hey there! 👋 Welcome to our official store.\n\nThank you for checking out our special offer from Facebook/TikTok! How can I assist you today?",
+        "caption": ""
+      },
+      {
+        "id": "step_w2",
+        "delay": 3,
+        "type": "voice",
+        "content": "/uploads/sample-greeting.wav",
+        "caption": "",
+        "voiceDuration": 3
+      },
+      {
+        "id": "step_w3",
+        "delay": 4,
+        "type": "text",
+        "content": "We have an ongoing FLASH SALE ending tonight: **50% OFF + Free Cash on Delivery** 🎁\n\nTap any quick button below to see details or place an instant order:",
+        "caption": ""
+      }
+    ]
+  },
+  {
+    "id": "flow_cod",
+    "name": "📦 Cash on Delivery (COD) Inquiries",
+    "triggerType": "quick_reply",
+    "keywords": [
+      "cod",
+      "cash on delivery",
+      "cash",
+      "delivery",
+      "pay later"
+    ],
+    "enabled": true,
+    "steps": [
+      {
+        "id": "step_cod1",
+        "delay": 2,
+        "type": "text",
+        "content": "Yes! 100% Cash on Delivery (COD) is available nationwide! 🚚✨\n\nYou do NOT need to pay anything in advance. You can inspect your parcel upon arrival and pay cash directly to the rider.",
+        "caption": ""
+      },
+      {
+        "id": "step_cod2",
+        "delay": 3,
+        "type": "image",
+        "content": "/assets/cod-guarantee.svg",
+        "caption": "✅ Open & inspect your parcel upon arrival before paying the courier rider!"
+      },
+      {
+        "id": "step_cod3",
+        "delay": 4,
+        "type": "text",
+        "content": "Delivery is typically within 24 to 48 hours with door-to-door tracking. Would you like to reserve yours with today's free delivery guarantee? Drop your delivery city or phone number below! 👇",
+        "caption": ""
+      }
+    ]
+  },
+  {
+    "id": "flow_pricing",
+    "name": "🔥 Pricing & Packages Funnel",
+    "triggerType": "quick_reply",
+    "keywords": [
+      "price",
+      "cost",
+      "how much",
+      "rate",
+      "discount",
+      "offer",
+      "package"
+    ],
+    "enabled": true,
+    "steps": [
+      {
+        "id": "step_pr1",
+        "delay": 2,
+        "type": "text",
+        "content": "🎉 Today's Limited-Time Promotional Bundles:\n\n⭐ **1 Unit:** $29 (Regular $45) - Free Shipping\n🔥 **2 Units (Most Popular):** $49 only (Save $41 + Free Bonus Gift!)\n💎 **3 Units (Family Pack):** $65 (Save 60%)\n\nAll packages include 1-Year Guarantee & Free Return Protection! 🛡️",
+        "caption": ""
+      },
+      {
+        "id": "step_pr2",
+        "delay": 4,
+        "type": "text",
+        "content": "Which package suits you best? Reply with **1, 2, or 3** or click 'Order Now' to lock in this promotional price! ⏳",
+        "caption": ""
+      }
+    ]
+  },
+  {
+    "id": "flow_order",
+    "name": "⚡ Instant Order Checkout Flow",
+    "triggerType": "quick_reply",
+    "keywords": [
+      "order",
+      "buy",
+      "purchase",
+      "checkout",
+      "book",
+      "deliver"
+    ],
+    "enabled": true,
+    "steps": [
+      {
+        "id": "step_ord1",
+        "delay": 2,
+        "type": "text",
+        "content": "Awesome decision! 🚀 Let's get your order dispatched right away.\n\nPlease reply with your delivery details:\n\n1. Full Name:\n2. Phone / WhatsApp Number:\n3. Complete Delivery Address:\n4. Selected Package (1, 2, or 3 units):",
+        "caption": ""
+      },
+      {
+        "id": "step_ord2",
+        "delay": 4,
+        "type": "text",
+        "content": "Once you send these details, our fulfillment warehouse will pack your order and send your tracking code! 📦",
+        "caption": ""
+      }
+    ]
+  },
+  {
+    "id": "flow_agent",
+    "name": "👤 Live Agent Escalation",
+    "triggerType": "quick_reply",
+    "keywords": [
+      "agent",
+      "human",
+      "talk",
+      "representative",
+      "call",
+      "support"
+    ],
+    "enabled": true,
+    "steps": [
+      {
+        "id": "step_ag1",
+        "delay": 2,
+        "type": "text",
+        "content": "I've alerted our senior customer support team right now! 🔔\n\nA human specialist has been assigned to your chat and will reply momentarily. Please feel free to ask your specific question here.",
+        "caption": ""
+      }
+    ]
+  }
+]
