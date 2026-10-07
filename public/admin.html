@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WhatsApp Business - Control Panel</title>
   
+  <!-- PWA & Mobile Viewport Meta Tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <link rel="manifest" href="/admin-manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png">
+  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="#111b21">
+  <meta name="apple-mobile-web-app-title" content="WA Admin">
+  <meta name="theme-color" content="#111b21">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -49,15 +60,20 @@
 
       <!-- Global Engine Switch & External Link -->
       <div class="topbar-actions">
+        <!-- PWA Install Button for Admin -->
+        <button type="button" class="btn-admin-pwa-install" id="adminPwaInstallBtn" style="display: none;" title="Install Admin App on Phone">
+          📲 Install App
+        </button>
+
         <div class="bot-switch-wrap" title="Toggle Auto-reply Engine globally">
-          <span class="switch-label">Auto-Funnel Bot:</span>
+          <span class="switch-label">Auto-Bot:</span>
           <label class="toggle-switch">
             <input type="checkbox" id="globalBotToggle" checked>
             <span class="slider"></span>
           </label>
         </div>
         <a href="/" target="_blank" class="preview-btn">
-          <span>↗ Open Visitor Chat</span>
+          <span>↗ Visitor Chat</span>
         </a>
       </div>
     </header>
@@ -91,6 +107,12 @@
             
             <!-- Chat Header -->
             <div class="chat-pane-header" id="chatPaneHeader">
+              <button class="admin-mobile-back-btn" id="adminBackToListBtn" title="Back to visitors" style="display: none;">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="#111b21">
+                  <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
+              </button>
+              
               <div class="active-visitor-info">
                 <div class="avatar-wrap">
                   <img src="/assets/default-avatar.svg" id="activeVisitorAvatar" alt="Avatar">
@@ -119,6 +141,11 @@
                 <select id="quickTriggerFlowSelect" class="action-select" title="Trigger specific sequence">
                   <option value="">⚡ Trigger Funnel...</option>
                 </select>
+
+                <!-- Mobile Lead Details Toggle -->
+                <button class="action-btn mobile-details-toggle" id="adminToggleDetailsBtn" title="Lead Details">
+                  ℹ️ Info
+                </button>
 
                 <!-- Clear Chat -->
                 <button class="action-btn danger-btn" id="clearChatBtn" title="Clear chat history">
@@ -169,8 +196,11 @@
 
           <!-- Right: Visitor Details Panel -->
           <div class="inbox-details-pane" id="detailsPane">
-            <div class="details-card">
+            <div class="details-pane-mobile-header">
               <h4>Lead & Visitor Insights</h4>
+              <button class="btn-close-details" id="closeDetailsPaneBtn" aria-label="Close">&times;</button>
+            </div>
+            <div class="details-card">
               <div class="detail-field">
                 <label>Visitor ID:</label>
                 <span id="detailVisitorId">-</span>

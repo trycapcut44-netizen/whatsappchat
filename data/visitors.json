@@ -4,11 +4,11 @@
     "name": "Visitor #5136",
     "phone": "",
     "createdAt": "2026-10-07T20:22:48.057Z",
-    "isOnline": true,
+    "isOnline": false,
     "botPaused": false,
     "unreadCount": 1,
     "source": "Direct Traffic",
-    "lastActive": "2026-10-07T20:31:22.348Z",
+    "lastActive": "2026-10-07T20:51:22.663Z",
     "lastMessage": "hello"
   },
   "test_vis_1791404630557": {

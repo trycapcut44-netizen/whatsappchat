@@ -873,3 +873,89 @@ html, body {
   opacity: 1;
 }
 
+/* ---------------- VISITOR VOICE RECORDING BAR ---------------- */
+.visitor-voice-bar {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  background: #ffffff;
+  border-radius: 28px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  border: 1px solid var(--wa-border-color);
+  z-index: 30;
+  animation: slideUpPrompt 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.voice-record-pulse {
+  width: 12px;
+  height: 12px;
+  background-color: #ea4335;
+  border-radius: 50%;
+  animation: pulse-dot 1s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+.voice-record-timer {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ea4335;
+  font-variant-numeric: tabular-nums;
+}
+
+.voice-record-label {
+  font-size: 13px;
+  color: var(--wa-text-secondary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.visitor-record-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-visitor-cancel-record {
+  background: #f0f2f5;
+  border: 1px solid #d1d7db;
+  color: #54656f;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-visitor-cancel-record:hover {
+  background: #e4e6eb;
+}
+
+.btn-visitor-send-record {
+  background: var(--wa-light-green);
+  border: none;
+  color: #ffffff;
+  padding: 6px 16px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 16px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: transform 0.15s, background 0.2s;
+}
+
+.btn-visitor-send-record:hover {
+  background: #20ba5a;
+}
+
+.btn-visitor-send-record:active {
+  transform: scale(0.96);
+}
+

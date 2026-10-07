@@ -37,10 +37,21 @@
   const phonePromptCard = document.getElementById('phonePromptCard');
   const phonePromptForm = document.getElementById('phonePromptForm');
   const promptPhoneInput = document.getElementById('promptPhoneInput');
-  const closePhonePrompt = document.getElementById('closePhonePrompt');
   const mediaLightbox = document.getElementById('mediaLightbox');
   const lightboxBody = document.getElementById('lightboxBody');
   const closeLightbox = document.getElementById('closeLightbox');
+  
+  // Visitor Voice Recording Elements
+  const visitorMicBtn = document.getElementById('visitorMicBtn');
+  const visitorVoiceBar = document.getElementById('visitorVoiceBar');
+  const visitorRecordTimer = document.getElementById('visitorRecordTimer');
+  const cancelVisitorRecordBtn = document.getElementById('cancelVisitorRecordBtn');
+  const sendVisitorRecordBtn = document.getElementById('sendVisitorRecordBtn');
+
+  let visitorMediaRecorder = null;
+  let visitorAudioChunks = [];
+  let visitorRecordStartTime = null;
+  let visitorRecordInterval = null;
 
   // --- Web Audio API WhatsApp Sound Synthesizer ---
   function initAudioContext() {
@@ -507,6 +518,96 @@
     }
     fileInput.value = '';
   });
+
+  // --- Visitor In-Browser Voice Note Recorder ---
+  if (visitorMicBtn) {
+    visitorMicBtn.addEventListener('click', async () => {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          alert('Microphone access is not supported by your browser.');
+          return;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        visitorAudioChunks = [];
+        visitorMediaRecorder = new MediaRecorder(stream);
+
+        visitorMediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) visitorAudioChunks.push(e.data);
+        };
+
+        visitorMediaRecorder.onstop = () => {
+          clearInterval(visitorRecordInterval);
+          const tracks = stream.getTracks();
+          tracks.forEach(t => t.stop());
+        };
+
+        visitorMediaRecorder.start();
+        visitorRecordStartTime = Date.now();
+        if (visitorVoiceBar) visitorVoiceBar.style.display = 'flex';
+
+        visitorRecordInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - visitorRecordStartTime) / 1000);
+          const m = Math.floor(elapsed / 60);
+          const s = elapsed % 60;
+          if (visitorRecordTimer) {
+            visitorRecordTimer.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+          }
+        }, 500);
+
+      } catch (err) {
+        alert('Microphone permission required to send voice notes: ' + err.message);
+      }
+    });
+  }
+
+  if (cancelVisitorRecordBtn) {
+    cancelVisitorRecordBtn.addEventListener('click', () => {
+      if (visitorMediaRecorder && visitorMediaRecorder.state !== 'inactive') {
+        visitorMediaRecorder.stop();
+      }
+      clearInterval(visitorRecordInterval);
+      if (visitorVoiceBar) visitorVoiceBar.style.display = 'none';
+      visitorAudioChunks = [];
+    });
+  }
+
+  if (sendVisitorRecordBtn) {
+    sendVisitorRecordBtn.addEventListener('click', () => {
+      if (!visitorMediaRecorder || visitorMediaRecorder.state === 'inactive') return;
+      const durationSec = Math.max(1, Math.floor((Date.now() - visitorRecordStartTime) / 1000));
+
+      visitorMediaRecorder.onstop = async () => {
+        clearInterval(visitorRecordInterval);
+        if (visitorVoiceBar) visitorVoiceBar.style.display = 'none';
+
+        const audioBlob = new Blob(visitorAudioChunks, { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append('file', audioBlob, 'visitor-voice.webm');
+
+        try {
+          const res = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          });
+          const data = await res.json();
+          if (data.url) {
+            playOutgoingPop();
+            socket.emit('visitor:message', {
+              visitorId: visitorId,
+              type: 'voice',
+              content: data.url,
+              voiceDuration: durationSec
+            });
+          }
+        } catch (err) {
+          console.error('Voice upload error:', err);
+        }
+      };
+
+      visitorMediaRecorder.stop();
+    });
+  }
 
   // --- Phone Prompt Submit ---
   phonePromptForm.addEventListener('submit', (e) => {

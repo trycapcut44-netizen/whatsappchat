@@ -248,6 +248,10 @@
     const vis = visitors.find(v => v.id === visitorId);
     if (!vis) return;
 
+    // Mobile layout toggle
+    const inboxContainer = document.querySelector('.inbox-container');
+    if (inboxContainer) inboxContainer.classList.add('chat-open');
+
     chatHeaderActions.style.display = 'flex';
     chatPaneFooter.style.display = 'flex';
 
@@ -945,6 +949,90 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  // --- Mobile Navigation & Drawer Toggles ---
+  const adminBackToListBtn = document.getElementById('adminBackToListBtn');
+  const adminToggleDetailsBtn = document.getElementById('adminToggleDetailsBtn');
+  const detailsPane = document.getElementById('detailsPane');
+  const closeDetailsPaneBtn = document.getElementById('closeDetailsPaneBtn');
+
+  // Create mobile details backdrop
+  let detailsBackdrop = document.querySelector('.details-backdrop');
+  if (!detailsBackdrop) {
+    detailsBackdrop = document.createElement('div');
+    detailsBackdrop.className = 'details-backdrop';
+    document.body.appendChild(detailsBackdrop);
+  }
+
+  if (adminBackToListBtn) {
+    adminBackToListBtn.addEventListener('click', () => {
+      const inboxContainer = document.querySelector('.inbox-container');
+      if (inboxContainer) inboxContainer.classList.remove('chat-open');
+      if (detailsPane) detailsPane.classList.remove('open');
+      if (detailsBackdrop) detailsBackdrop.classList.remove('open');
+      activeVisitorId = null;
+    });
+  }
+
+  if (adminToggleDetailsBtn) {
+    adminToggleDetailsBtn.addEventListener('click', () => {
+      if (detailsPane) detailsPane.classList.toggle('open');
+      if (detailsBackdrop) detailsBackdrop.classList.toggle('open');
+    });
+  }
+
+  if (closeDetailsPaneBtn) {
+    closeDetailsPaneBtn.addEventListener('click', () => {
+      if (detailsPane) detailsPane.classList.remove('open');
+      if (detailsBackdrop) detailsBackdrop.classList.remove('open');
+    });
+  }
+
+  detailsBackdrop.addEventListener('click', () => {
+    if (detailsPane) detailsPane.classList.remove('open');
+    detailsBackdrop.classList.remove('open');
+  });
+
+  // --- Admin PWA Installation & Service Worker ---
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        console.log('✓ Admin PWA Service Worker Registered', reg.scope);
+      }).catch((err) => {
+        console.log('Admin Service Worker note:', err);
+      });
+    });
+  }
+
+  let adminDeferredPrompt = null;
+  const adminPwaInstallBtn = document.getElementById('adminPwaInstallBtn');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    adminDeferredPrompt = e;
+    if (adminPwaInstallBtn) adminPwaInstallBtn.style.display = 'inline-block';
+  });
+
+  if (adminPwaInstallBtn) {
+    adminPwaInstallBtn.addEventListener('click', async () => {
+      if (adminDeferredPrompt) {
+        adminDeferredPrompt.prompt();
+        const { outcome } = await adminDeferredPrompt.userChoice;
+        console.log('Admin install choice:', outcome);
+        adminDeferredPrompt = null;
+        adminPwaInstallBtn.style.display = 'none';
+      } else {
+        alert('📲 To install Admin App on your phone:\n\n• On iPhone (Safari): Tap Share (⎋) -> "Add to Home Screen" (⊞)\n• On Android (Chrome): Tap menu (⋮) -> "Install App" or "Add to Home Screen"');
+      }
+    });
+  }
+
+  const isAdminIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+  const isAdminStandalone = () => ('standalone' in window.navigator && window.navigator.standalone) || window.matchMedia('(display-mode: standalone)').matches;
+
+  if (isAdminIos() && !isAdminStandalone() && adminPwaInstallBtn) {
+    adminPwaInstallBtn.style.display = 'inline-block';
   }
 
   // Initialize

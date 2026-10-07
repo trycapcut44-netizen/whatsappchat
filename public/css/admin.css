@@ -1102,3 +1102,225 @@ input:checked + .slider:before {
 .btn-add-step:hover {
   background: #dcf2ee;
 }
+
+/* ---------------- ADMIN PWA & MOBILE RESPONSIVENESS ---------------- */
+.btn-admin-pwa-install {
+  background: var(--wa-light-green);
+  color: #ffffff;
+  border: none;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 16px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  white-space: nowrap;
+  animation: pulse-dot 2s infinite ease-in-out;
+}
+
+.admin-mobile-back-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  margin-right: 4px;
+  cursor: pointer;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.details-pane-mobile-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 12px;
+}
+
+.btn-close-details {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.mobile-details-toggle {
+  display: none;
+}
+
+/* Details Backdrop for Mobile Drawer */
+.details-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 190;
+  display: none;
+}
+
+.details-backdrop.open {
+  display: block;
+}
+
+/* Mobile & Tablet Breakpoint */
+@media (max-width: 850px) {
+  .admin-topbar {
+    padding: 8px 12px;
+    height: auto;
+    min-height: 54px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .topbar-brand h2 {
+    font-size: 14px;
+  }
+
+  .topbar-brand .subtext {
+    display: none;
+  }
+
+  .topbar-nav {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .topbar-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-tab {
+    padding: 6px 12px;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+
+  .topbar-actions {
+    gap: 8px;
+  }
+
+  .switch-label {
+    display: none;
+  }
+
+  .preview-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  /* Mobile Inbox Layout */
+  .inbox-container {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .inbox-sidebar {
+    width: 100%;
+  }
+
+  .inbox-chat-pane {
+    width: 100%;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 10;
+  }
+
+  /* When on mobile and no chat selected, hide chat pane */
+  .inbox-container:not(.chat-open) .inbox-chat-pane {
+    display: none !important;
+  }
+
+  /* When on mobile and chat selected, hide visitor list */
+  .inbox-container.chat-open .inbox-sidebar {
+    display: none !important;
+  }
+
+  .admin-mobile-back-btn {
+    display: flex !important;
+  }
+
+  .mobile-details-toggle {
+    display: inline-block !important;
+  }
+
+  /* Mobile Drawer for Details Pane */
+  .inbox-details-pane {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 85%;
+    max-width: 320px;
+    background: #ffffff;
+    z-index: 200;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+    transform: translateX(100%);
+    transition: transform 0.25s ease-in-out;
+  }
+
+  .inbox-details-pane.open {
+    transform: translateX(0);
+  }
+
+  .details-pane-mobile-header {
+    display: flex;
+  }
+
+  .chat-pane-header {
+    padding: 0 8px;
+  }
+
+  .chat-header-actions {
+    gap: 4px;
+  }
+
+  .action-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .action-select {
+    padding: 5px 6px;
+    font-size: 11px;
+    max-width: 100px;
+  }
+
+  .chat-pane-footer {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  /* Responsive Grid for Funnels & Settings */
+  .flows-grid, .settings-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .funnels-page, .quick-replies-page, .settings-page {
+    padding: 14px 12px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .modal-container {
+    width: 95%;
+    max-height: 94vh;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
