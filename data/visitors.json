@@ -10,5 +10,33 @@
     "source": "Direct Traffic",
     "lastActive": "2026-10-07T20:51:22.663Z",
     "lastMessage": "hello"
+  },
+  "vis_tt_1791472449853": {
+    "id": "vis_tt_1791472449853",
+    "name": "Ayesha Khan (Verified TikTok Lead)",
+    "avatar": "/assets/tiktok-avatar.svg",
+    "platform": "tiktok",
+    "phone": "+92 300 1234567",
+    "createdAt": "2026-10-08T15:14:09.918Z",
+    "isOnline": false,
+    "botPaused": false,
+    "unreadCount": 1,
+    "source": "TikTok Ads",
+    "lastActive": "2026-10-08T15:14:15.866Z",
+    "lastMessage": "Special promo price kya hai?"
+  },
+  "vis_fb_1791472449854": {
+    "id": "vis_fb_1791472449854",
+    "name": "Client Two",
+    "avatar": "/assets/default-avatar.svg",
+    "platform": "web",
+    "phone": "",
+    "createdAt": "2026-10-08T15:14:09.923Z",
+    "isOnline": false,
+    "botPaused": false,
+    "unreadCount": 0,
+    "source": "Direct",
+    "lastActive": "2026-10-08T15:14:15.867Z",
+    "lastMessage": "Special promo price kya hai? (Forwarded to team)"
   }
 }

@@ -6,6 +6,16 @@
 (function () {
   'use strict';
 
+  const urlParams = new URLSearchParams(window.location.search);
+  let tenantId = urlParams.get('tenant') || '';
+  const hostParts = window.location.host.split(':')[0].toLowerCase().split('.');
+  if (!tenantId && hostParts.length >= 3 && hostParts[0] !== 'www' && hostParts[0] !== 'api') {
+    tenantId = hostParts[0];
+  }
+  if (!tenantId) tenantId = 'default';
+
+  const adminToken = localStorage.getItem('wa_admin_token') || '';
+
   let socket = null;
   let visitors = [];
   let flows = [];
@@ -201,10 +211,18 @@
 
   // --- Connect Socket.io ---
   function connectAdminSocket() {
-    socket = io();
+    socket = io({
+      query: { tenantId: tenantId },
+      auth: { token: adminToken }
+    });
 
     socket.on('connect', () => {
-      socket.emit('admin:join');
+      socket.emit('admin:join', { token: adminToken });
+    });
+
+    socket.on('auth:required', () => {
+      const redirectQuery = (tenantId && tenantId !== 'default') ? `?tenant=${encodeURIComponent(tenantId)}` : '';
+      window.location.href = '/login' + redirectQuery;
     });
 
     socket.on('admin:init_data', (data) => {
@@ -1961,7 +1979,225 @@
     adminPwaInstallBtn.style.display = 'inline-block';
   }
 
+  // --- Check Auth Session & Multi-Tenant Context ---
+  async function checkAuthSession() {
+    try {
+      const res = await fetch('/api/auth/me' + (tenantId !== 'default' ? '?tenant=' + encodeURIComponent(tenantId) : ''));
+      if (!res.ok) {
+        throw new Error('Not logged in');
+      }
+      const data = await res.json();
+      const topbarUserPill = document.getElementById('topbarUserPill');
+      const topbarTenantPill = document.getElementById('topbarTenantPill');
+      const topbarVisitorLink = document.getElementById('topbarVisitorLink');
+      const navTabTenants = document.getElementById('navTabTenants');
+
+      if (topbarUserPill) topbarUserPill.textContent = '👤 ' + (data.username || 'admin');
+      if (topbarTenantPill) {
+        topbarTenantPill.textContent = (data.tenantId && data.tenantId !== 'default') ? `🏢 ${data.tenantId}` : '🏢 Master Portal';
+      }
+      if (topbarVisitorLink) {
+        topbarVisitorLink.href = (data.tenantId && data.tenantId !== 'default') ? `/?tenant=${encodeURIComponent(data.tenantId)}` : '/';
+      }
+
+      // Hide or show subdomains management tab: only visible on master tenant
+      if (navTabTenants) {
+        if (data.tenantId && data.tenantId !== 'default') {
+          navTabTenants.style.display = 'none';
+        } else {
+          navTabTenants.style.display = 'inline-flex';
+          loadTenantsList();
+        }
+      }
+    } catch (e) {
+      const redirectQuery = (tenantId && tenantId !== 'default') ? `?tenant=${encodeURIComponent(tenantId)}` : '';
+      window.location.href = '/login' + redirectQuery;
+    }
+  }
+
+  // --- Logout Button Handler ---
+  const adminLogoutBtn = document.getElementById('adminLogoutBtn');
+  if (adminLogoutBtn) {
+    adminLogoutBtn.addEventListener('click', async () => {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (e) {}
+      localStorage.removeItem('wa_admin_token');
+      const redirectQuery = (tenantId && tenantId !== 'default') ? `?tenant=${encodeURIComponent(tenantId)}` : '';
+      window.location.href = '/login' + redirectQuery;
+    });
+  }
+
+  // --- Change Admin Credentials Handler ---
+  const saveCredentialsBtn = document.getElementById('saveCredentialsBtn');
+  const settingAdminUsername = document.getElementById('settingAdminUsername');
+  const settingAdminPassword = document.getElementById('settingAdminPassword');
+
+  if (saveCredentialsBtn) {
+    saveCredentialsBtn.addEventListener('click', async () => {
+      const newUsername = settingAdminUsername.value.trim();
+      const newPassword = settingAdminPassword.value;
+      if (!newPassword || newPassword.length < 4) {
+        alert('Please enter a new password (at least 4 characters).');
+        return;
+      }
+      try {
+        const res = await fetch('/api/auth/change-credentials' + (tenantId !== 'default' ? '?tenant=' + encodeURIComponent(tenantId) : ''), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newUsername, newPassword })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Admin credentials updated successfully!');
+          settingAdminPassword.value = '';
+          const topbarUserPill = document.getElementById('topbarUserPill');
+          if (topbarUserPill) topbarUserPill.textContent = '👤 ' + data.username;
+        } else {
+          alert(data.error || 'Failed to update credentials.');
+        }
+      } catch (err) {
+        alert('Error updating credentials: ' + err.message);
+      }
+    });
+  }
+
+  // --- Subdomains / Multi-Tenant Management Logic ---
+  const tenantsGrid = document.getElementById('tenantsGrid');
+  const openCreateTenantModalBtn = document.getElementById('openCreateTenantModalBtn');
+  const createTenantModal = document.getElementById('createTenantModal');
+  const closeCreateTenantModal = document.getElementById('closeCreateTenantModal');
+  const cancelCreateTenantModal = document.getElementById('cancelCreateTenantModal');
+  const saveCreateTenantBtn = document.getElementById('saveCreateTenantBtn');
+  const modalTenantSlug = document.getElementById('modalTenantSlug');
+  const modalTenantName = document.getElementById('modalTenantName');
+  const modalTenantUsername = document.getElementById('modalTenantUsername');
+  const modalTenantPassword = document.getElementById('modalTenantPassword');
+
+  async function loadTenantsList() {
+    if (!tenantsGrid) return;
+    try {
+      const res = await fetch('/api/tenants');
+      const list = await res.json();
+      tenantsGrid.innerHTML = '';
+      if (!list || list.length === 0) {
+        tenantsGrid.innerHTML = `<div style="grid-column: 1 / -1; padding: 30px; text-align: center; color: #64748b; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e1;">No client subdomains created yet. Click "+ Add New Client / Subdomain" above to create one.</div>`;
+        return;
+      }
+
+      const hostBase = window.location.host;
+      const isLocal = hostBase.includes('localhost') || hostBase.includes('127.0.0.1');
+
+      list.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'tenant-card';
+
+        const chatUrl = isLocal 
+          ? `${window.location.protocol}//${hostBase}/?tenant=${t.subdomain}`
+          : `${window.location.protocol}//${t.subdomain}.${hostBase}/`;
+
+        const adminUrl = isLocal 
+          ? `${window.location.protocol}//${hostBase}/admin?tenant=${t.subdomain}`
+          : `${window.location.protocol}//${t.subdomain}.${hostBase}/admin`;
+
+        card.innerHTML = `
+          <div class="tenant-card-header">
+            <div>
+              <div class="tenant-card-title">${escapeHtml(t.name || t.subdomain)}</div>
+              <div class="tenant-card-sub">🏢 Subdomain: ${escapeHtml(t.subdomain)}</div>
+            </div>
+          </div>
+
+          <div class="tenant-link-box">
+            <div class="tenant-link-row">
+              <span class="tenant-link-label">Chat Link:</span>
+              <a href="${chatUrl}" target="_blank" class="tenant-link-url">${chatUrl}</a>
+            </div>
+            <div class="tenant-link-row">
+              <span class="tenant-link-label">Admin Portal:</span>
+              <a href="${adminUrl}" target="_blank" class="tenant-link-url">${adminUrl}</a>
+            </div>
+          </div>
+
+          <div class="tenant-card-actions">
+            <a href="${adminUrl}" target="_blank" class="btn-open-portal">Open Portal ↗</a>
+            <button type="button" class="btn-del-tenant" data-tenant-id="${t.id}">🗑 Delete</button>
+          </div>
+        `;
+
+        card.querySelector('.btn-del-tenant').addEventListener('click', async () => {
+          if (!confirm(`Are you sure you want to delete client "${t.name || t.subdomain}" and all their data?`)) return;
+          try {
+            const delRes = await fetch(`/api/tenants/${t.id}`, { method: 'DELETE' });
+            if (delRes.ok) {
+              loadTenantsList();
+            }
+          } catch (e) {
+            alert('Failed to delete tenant');
+          }
+        });
+
+        tenantsGrid.appendChild(card);
+      });
+    } catch (e) {
+      console.error('Error loading tenants:', e);
+    }
+  }
+
+  if (openCreateTenantModalBtn) {
+    openCreateTenantModalBtn.addEventListener('click', () => {
+      createTenantModal.style.display = 'flex';
+      modalTenantSlug.value = '';
+      modalTenantName.value = '';
+    });
+  }
+
+  if (closeCreateTenantModal) {
+    closeCreateTenantModal.addEventListener('click', () => { createTenantModal.style.display = 'none'; });
+  }
+  if (cancelCreateTenantModal) {
+    cancelCreateTenantModal.addEventListener('click', () => { createTenantModal.style.display = 'none'; });
+  }
+
+  if (saveCreateTenantBtn) {
+    saveCreateTenantBtn.addEventListener('click', async () => {
+      const slug = (modalTenantSlug.value || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').trim();
+      const name = (modalTenantName.value || '').trim();
+      const username = (modalTenantUsername.value || 'admin').trim();
+      const password = modalTenantPassword.value || 'Rizwan@410';
+
+      if (!slug || !name) {
+        alert('Please provide both a subdomain handle and business name.');
+        return;
+      }
+
+      try {
+        saveCreateTenantBtn.disabled = true;
+        saveCreateTenantBtn.textContent = 'Creating...';
+        const res = await fetch('/api/tenants', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: slug, name, username, password })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          createTenantModal.style.display = 'none';
+          loadTenantsList();
+          alert(`Client Subdomain "${slug}" created successfully!`);
+        } else {
+          alert(data.error || 'Failed to create subdomain.');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        saveCreateTenantBtn.disabled = false;
+        saveCreateTenantBtn.textContent = 'Create Subdomain & Store';
+      }
+    });
+  }
+
   // Initialize
+  checkAuthSession();
   connectAdminSocket();
 
 })();

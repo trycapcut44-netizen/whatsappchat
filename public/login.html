@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login - WhatsApp Business</title>
+  <link rel="icon" href="/assets/whatsapp-business.svg" type="image/svg+xml">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: #111b21;
+      background-image: radial-gradient(circle at 50% 30%, #1f2c34 0%, #111b21 70%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: #e9edef;
+    }
+
+    /* Top Brand Bar */
+    .login-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .login-brand img {
+      width: 44px;
+      height: 44px;
+    }
+
+    .login-brand-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: #ffffff;
+    }
+
+    .login-brand-badge {
+      font-size: 11px;
+      background: #00a884;
+      color: #ffffff;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Login Card */
+    .login-card {
+      background: #202c33;
+      border: 1px solid rgba(134, 150, 160, 0.15);
+      border-radius: 16px;
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+      position: relative;
+    }
+
+    .login-card-header {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .login-card-header h2 {
+      font-size: 19px;
+      font-weight: 600;
+      color: #e9edef;
+      margin-bottom: 6px;
+    }
+
+    .tenant-badge {
+      display: inline-block;
+      font-size: 12px;
+      color: #00a884;
+      background: rgba(0, 168, 132, 0.12);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .login-card-header p {
+      font-size: 13px;
+      color: #8696a0;
+      line-height: 18px;
+    }
+
+    /* Error Banner */
+    .error-banner {
+      background: rgba(234, 67, 53, 0.15);
+      border: 1px solid rgba(234, 67, 53, 0.35);
+      color: #f28b82;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 18px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Form Inputs */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #8696a0;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 12px;
+      color: #8696a0;
+      font-size: 16px;
+      pointer-events: none;
+    }
+
+    .form-input {
+      width: 100%;
+      background: #111b21;
+      border: 1.5px solid #2a3942;
+      border-radius: 10px;
+      padding: 12px 14px 12px 38px;
+      font-size: 14.5px;
+      color: #e9edef;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-input:focus {
+      border-color: #00a884;
+      box-shadow: 0 0 0 3px rgba(0, 168, 132, 0.2);
+    }
+
+    .toggle-pwd {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      color: #8696a0;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px;
+    }
+
+    .toggle-pwd:hover {
+      color: #e9edef;
+    }
+
+    /* Submit Button */
+    .btn-submit {
+      width: 100%;
+      background: #00a884;
+      color: #111b21;
+      border: none;
+      border-radius: 10px;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-submit:hover {
+      background: #06cf9c;
+    }
+
+    .btn-submit:active {
+      transform: scale(0.98);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Footer info */
+    .login-footer {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 12px;
+      color: #667781;
+    }
+
+    .login-footer span {
+      color: #00a884;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Brand header -->
+  <div class="login-brand">
+    <img src="/assets/whatsapp-business.svg" alt="WhatsApp Business">
+    <div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="login-brand-title">WhatsApp Live Chat</span>
+        <span class="login-brand-badge">PRO</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Form Box -->
+  <div class="login-card">
+    <div class="login-card-header">
+      <h2>Admin Control Panel</h2>
+      <p id="portalSubtitle">Sign in to manage sales funnels, live chats & leads</p>
+      <div id="tenantTag" class="tenant-badge" style="display: none;"></div>
+    </div>
+
+    <!-- Error message banner -->
+    <div class="error-banner" id="errorBanner">
+      <span>⚠️</span>
+      <span id="errorMessage">Invalid username or password</span>
+    </div>
+
+    <form id="loginForm" autocomplete="on">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <div class="input-wrap">
+          <span class="input-icon">👤</span>
+          <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            class="form-input" 
+            placeholder="Enter admin username" 
+            required 
+            autocomplete="username"
+            autofocus>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            class="form-input" 
+            placeholder="Enter admin password" 
+            required 
+            autocomplete="current-password">
+          <button type="button" class="toggle-pwd" id="togglePasswordBtn" title="Show/Hide Password">👁️</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">
+        <span>Sign In to Dashboard</span>
+        <span>➔</span>
+      </button>
+    </form>
+  </div>
+
+  <div class="login-footer">
+    End-to-End Encrypted Admin Session • Powered by <span>WhatsApp Business</span>
+  </div>
+
+  <script>
+    (function() {
+      const form = document.getElementById('loginForm');
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+      const submitBtn = document.getElementById('submitBtn');
+      const errorBanner = document.getElementById('errorBanner');
+      const errorMessage = document.getElementById('errorMessage');
+      const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+      const tenantTag = document.getElementById('tenantTag');
+
+      // Detect tenant from query or subdomain
+      const urlParams = new URLSearchParams(window.location.search);
+      let tenant = urlParams.get('tenant') || '';
+      
+      const host = window.location.host.split(':')[0].toLowerCase();
+      const hostParts = host.split('.');
+      if (!tenant && hostParts.length >= 3 && hostParts[0] !== 'www') {
+        tenant = hostParts[0];
+      }
+
+      if (tenant && tenant !== 'default') {
+        tenantTag.textContent = '🏢 Subdomain: ' + tenant;
+        tenantTag.style.display = 'inline-block';
+      }
+
+      // Password visibility toggle
+      togglePasswordBtn.addEventListener('click', () => {
+        const isPwd = passwordInput.type === 'password';
+        passwordInput.type = isPwd ? 'text' : 'password';
+        togglePasswordBtn.textContent = isPwd ? '🙈' : '👁️';
+      });
+
+      // Handle submit
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errorBanner.style.display = 'none';
+
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!username || !password) return;
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Verifying...</span>';
+
+        try {
+          const res = await fetch('/api/auth/login' + (tenant ? '?tenant=' + encodeURIComponent(tenant) : ''), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, tenant })
+          });
+
+          const data = await res.json();
+
+          if (res.ok && data.success) {
+            submitBtn.innerHTML = '<span>Access Granted ✔</span>';
+            submitBtn.style.background = '#25D366';
+
+            // Store token in localStorage as backup
+            if (data.token) {
+              localStorage.setItem('wa_admin_token', data.token);
+            }
+
+            // Redirect to admin
+            setTimeout(() => {
+              const redirectUrl = '/admin' + (tenant ? '?tenant=' + encodeURIComponent(tenant) : '');
+              window.location.href = redirectUrl;
+            }, 400);
+          } else {
+            throw new Error(data.error || 'Invalid credentials');
+          }
+        } catch (err) {
+          errorMessage.textContent = err.message || 'Incorrect username or password.';
+          errorBanner.style.display = 'flex';
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>Sign In to Dashboard</span> <span>➔</span>';
+          passwordInput.value = '';
+          passwordInput.focus();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

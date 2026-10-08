@@ -1,22 +1,39 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const DATA_DIR = path.join(__dirname, 'data');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const TENANTS_DIR = path.join(DATA_DIR, 'tenants');
+const TENANTS_FILE = path.join(DATA_DIR, 'tenants.json');
 
-// Ensure data and uploads directories exist
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+// Ensure base directories exist
+[DATA_DIR, UPLOADS_DIR, TENANTS_DIR].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
+// Password Hashing Helpers
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  return `${salt}:${hash}`;
 }
 
-const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
-const FLOWS_FILE = path.join(DATA_DIR, 'flows.json');
-const QUICK_REPLIES_FILE = path.join(DATA_DIR, 'quick_replies.json');
-const VISITORS_FILE = path.join(DATA_DIR, 'visitors.json');
-const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
+function verifyPassword(password, storedHash) {
+  if (!storedHash) return false;
+  const parts = storedHash.split(':');
+  if (parts.length !== 2) {
+    return password === storedHash;
+  }
+  const [salt, originalHash] = parts;
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  return hash === originalHash;
+}
+
+// In-Memory Active Sessions Store: token -> { tenantId, username, expiresAt }
+const activeSessions = new Map();
 
 // Default initial data
 const defaultSettings = {
@@ -28,9 +45,9 @@ const defaultSettings = {
   soundEnabled: true,
   phonePromptEnabled: true,
   phonePromptMessage: "💬 In case our chat gets interrupted, please share your WhatsApp or Mobile number so we can reach you:",
-  phonePromptDelay: 12, // seconds
+  phonePromptDelay: 12,
   autoWelcome: true,
-  welcomeDelay: 2, // seconds before starting welcome flow
+  welcomeDelay: 2,
   fallbackMessage: "Thanks for your message! Our specialist is reviewing your inquiry and will reply in a moment. You can also pick an option below 👇",
   adminPin: "1234"
 };
@@ -102,25 +119,17 @@ const defaultFlows = [
       {
         id: "step_w2",
         delay: 3,
-        type: "voice",
-        content: "/uploads/sample-greeting.wav",
-        caption: "",
-        voiceDuration: 3
-      },
-      {
-        id: "step_w3",
-        delay: 4,
         type: "text",
-        content: "We have an ongoing FLASH SALE ending tonight: **50% OFF + Free Cash on Delivery** 🎁\n\nTap any quick button below to see details or place an instant order:",
+        content: "Tap any quick option below to check cash on delivery, see parcel unboxing photos, or view today's discount price! 👇",
         caption: ""
       }
     ]
   },
   {
     id: "flow_cod",
-    name: "📦 Cash on Delivery (COD) Inquiries",
+    name: "📦 Cash on Delivery Guarantee",
     triggerType: "quick_reply",
-    keywords: ["cod", "cash on delivery", "cash", "delivery", "pay later"],
+    keywords: ["cod", "cash on delivery", "advance", "payment", "delivery time"],
     enabled: true,
     steps: [
       {
@@ -228,7 +237,7 @@ function readJSON(filePath, fallback) {
 // Helper to safely write JSON atomically
 function writeJSON(filePath, data) {
   try {
-    const tempPath = `${filePath}.${Date.now()}.tmp`;
+    const tempPath = `${filePath}.${Date.now()}.${Math.random().toString(36).substr(2, 4)}.tmp`;
     fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
     fs.renameSync(tempPath, filePath);
     return true;
@@ -244,23 +253,82 @@ function writeJSON(filePath, data) {
   }
 }
 
+// Storage instance per Tenant
 class Storage {
-  constructor() {
+  constructor(dirPath = DATA_DIR, tenantId = 'default') {
+    this.dirPath = dirPath;
+    this.tenantId = tenantId;
+
+    if (!fs.existsSync(this.dirPath)) {
+      fs.mkdirSync(this.dirPath, { recursive: true });
+    }
+
+    this.settingsFile = path.join(this.dirPath, 'settings.json');
+    this.flowsFile = path.join(this.dirPath, 'flows.json');
+    this.quickRepliesFile = path.join(this.dirPath, 'quick_replies.json');
+    this.visitorsFile = path.join(this.dirPath, 'visitors.json');
+    this.messagesFile = path.join(this.dirPath, 'messages.json');
+    this.authFile = path.join(this.dirPath, 'auth.json');
+
     this.init();
   }
 
   init() {
-    this.settings = readJSON(SETTINGS_FILE, defaultSettings);
-    this.flows = readJSON(FLOWS_FILE, defaultFlows);
-    const existingQr = readJSON(QUICK_REPLIES_FILE, defaultQuickReplies);
+    this.settings = readJSON(this.settingsFile, defaultSettings);
+    this.flows = readJSON(this.flowsFile, defaultFlows);
+    const existingQr = readJSON(this.quickRepliesFile, defaultQuickReplies);
     if (!existingQr || !Array.isArray(existingQr) || existingQr.length === 0) {
       this.quickReplies = [...defaultQuickReplies];
-      writeJSON(QUICK_REPLIES_FILE, this.quickReplies);
+      writeJSON(this.quickRepliesFile, this.quickReplies);
     } else {
       this.quickReplies = existingQr;
     }
-    this.visitors = readJSON(VISITORS_FILE, {});
-    this.messages = readJSON(MESSAGES_FILE, []);
+    this.visitors = readJSON(this.visitorsFile, {});
+    this.messages = readJSON(this.messagesFile, []);
+
+    // Ensure default credentials: admin / Rizwan@410
+    const existingAuth = readJSON(this.authFile, null);
+    if (!existingAuth) {
+      const initialAuth = {
+        username: 'admin',
+        passwordHash: hashPassword('Rizwan@410'),
+        updatedAt: new Date().toISOString()
+      };
+      writeJSON(this.authFile, initialAuth);
+    }
+  }
+
+  // --- Auth & Credentials ---
+  getAuth() {
+    const auth = readJSON(this.authFile, null);
+    if (!auth) {
+      const initialAuth = {
+        username: 'admin',
+        passwordHash: hashPassword('Rizwan@410'),
+        updatedAt: new Date().toISOString()
+      };
+      writeJSON(this.authFile, initialAuth);
+      return initialAuth;
+    }
+    return auth;
+  }
+
+  verifyCredentials(username, password) {
+    const auth = this.getAuth();
+    if (!auth || !auth.username) return false;
+    if (auth.username.toLowerCase() !== (username || '').toLowerCase().trim()) return false;
+    return verifyPassword(password, auth.passwordHash);
+  }
+
+  updateCredentials(newUsername, newPassword) {
+    const current = this.getAuth();
+    const updated = {
+      username: newUsername ? newUsername.trim() : (current.username || 'admin'),
+      passwordHash: newPassword ? hashPassword(newPassword) : current.passwordHash,
+      updatedAt: new Date().toISOString()
+    };
+    writeJSON(this.authFile, updated);
+    return { success: true, username: updated.username };
   }
 
   // --- Settings ---
@@ -270,7 +338,7 @@ class Storage {
 
   updateSettings(newSettings) {
     this.settings = { ...this.settings, ...newSettings };
-    writeJSON(SETTINGS_FILE, this.settings);
+    writeJSON(this.settingsFile, this.settings);
     return this.settings;
   }
 
@@ -290,63 +358,14 @@ class Storage {
     } else {
       this.flows.push(flowData);
     }
-    writeJSON(FLOWS_FILE, this.flows);
+    writeJSON(this.flowsFile, this.flows);
     return flowData;
   }
 
   deleteFlow(id) {
     this.flows = this.flows.filter(f => f.id !== id);
-    writeJSON(FLOWS_FILE, this.flows);
+    writeJSON(this.flowsFile, this.flows);
     return true;
-  }
-
-  // Find matching flow or media action by keyword / quick reply
-  findFlowByKeyword(text) {
-    if (!text) return null;
-    const clean = text.trim().toLowerCase();
-    
-    // Check quick replies matching label or id
-    const qrMatch = this.quickReplies.find(qr => 
-      (qr.label && qr.label.toLowerCase() === clean) ||
-      (qr.id && qr.id.toLowerCase() === clean)
-    );
-    if (qrMatch) {
-      const actionType = qrMatch.actionType || (qrMatch.flowId ? 'flow' : (qrMatch.type || 'text'));
-      if (actionType === 'flow' && qrMatch.flowId) {
-        const flow = this.getFlowById(qrMatch.flowId);
-        if (flow && flow.enabled) return flow;
-      } else if (['voice', 'image', 'video', 'text'].includes(actionType)) {
-        // Synthesize dynamic single-step flow so typing indicator, audio status, and delay work seamlessly
-        return {
-          id: 'qr_flow_' + qrMatch.id,
-          name: qrMatch.label,
-          triggerType: 'quick_reply',
-          enabled: true,
-          steps: [
-            {
-              id: 'step_qr_' + qrMatch.id,
-              delay: Math.max(1, parseInt(qrMatch.delay) || 2),
-              type: actionType,
-              content: qrMatch.content || '',
-              caption: qrMatch.caption || '',
-              voiceDuration: qrMatch.voiceDuration || (actionType === 'voice' ? 12 : 0)
-            }
-          ]
-        };
-      }
-    }
-
-    // Check keyword matching across enabled flows
-    for (const flow of this.flows) {
-      if (!flow.enabled || !flow.keywords) continue;
-      for (const kw of flow.keywords) {
-        const kwLower = kw.trim().toLowerCase();
-        if (kwLower && (clean === kwLower || clean.includes(kwLower))) {
-          return flow;
-        }
-      }
-    }
-    return null;
   }
 
   // --- Quick Replies ---
@@ -360,7 +379,7 @@ class Storage {
 
   saveQuickReplies(replies) {
     this.quickReplies = replies;
-    writeJSON(QUICK_REPLIES_FILE, this.quickReplies);
+    writeJSON(this.quickRepliesFile, this.quickReplies);
     return this.quickReplies;
   }
 
@@ -380,7 +399,7 @@ class Storage {
       ...visitorData,
       lastActive: new Date().toISOString()
     };
-    writeJSON(VISITORS_FILE, this.visitors);
+    writeJSON(this.visitorsFile, this.visitors);
     return this.visitors[visitorData.id];
   }
 
@@ -388,7 +407,7 @@ class Storage {
     if (this.visitors[visitorId]) {
       this.visitors[visitorId].phone = phone;
       this.visitors[visitorId].lastActive = new Date().toISOString();
-      writeJSON(VISITORS_FILE, this.visitors);
+      writeJSON(this.visitorsFile, this.visitors);
       return this.visitors[visitorId];
     }
     return null;
@@ -401,7 +420,7 @@ class Storage {
         ...profileData,
         lastActive: new Date().toISOString()
       };
-      writeJSON(VISITORS_FILE, this.visitors);
+      writeJSON(this.visitorsFile, this.visitors);
       return this.visitors[visitorId];
     }
     return null;
@@ -410,7 +429,7 @@ class Storage {
   setBotPaused(visitorId, paused) {
     if (this.visitors[visitorId]) {
       this.visitors[visitorId].botPaused = paused;
-      writeJSON(VISITORS_FILE, this.visitors);
+      writeJSON(this.visitorsFile, this.visitors);
       return this.visitors[visitorId];
     }
     return null;
@@ -419,7 +438,7 @@ class Storage {
   resetUnread(visitorId) {
     if (this.visitors[visitorId]) {
       this.visitors[visitorId].unreadCount = 0;
-      writeJSON(VISITORS_FILE, this.visitors);
+      writeJSON(this.visitorsFile, this.visitors);
       return this.visitors[visitorId];
     }
     return null;
@@ -428,7 +447,7 @@ class Storage {
   incrementUnread(visitorId) {
     if (this.visitors[visitorId]) {
       this.visitors[visitorId].unreadCount = (this.visitors[visitorId].unreadCount || 0) + 1;
-      writeJSON(VISITORS_FILE, this.visitors);
+      writeJSON(this.visitorsFile, this.visitors);
       return this.visitors[visitorId];
     }
     return null;
@@ -443,14 +462,14 @@ class Storage {
     const newMsg = {
       id: msg.id || 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
       visitorId: msg.visitorId,
-      sender: msg.sender, // 'visitor', 'bot', 'admin', 'system'
-      type: msg.type || 'text', // 'text', 'voice', 'image', 'video', 'system'
+      sender: msg.sender,
+      type: msg.type || 'text',
       content: msg.content || '',
       caption: msg.caption || '',
       voiceDuration: msg.voiceDuration || 0,
       isForwarded: !!msg.isForwarded,
       timestamp: msg.timestamp || new Date().toISOString(),
-      status: msg.status || 'delivered' // 'sent', 'delivered', 'read'
+      status: msg.status || 'delivered'
     };
     this.messages.push(newMsg);
     
@@ -460,10 +479,10 @@ class Storage {
         ? (newMsg.type === 'voice' ? '🎤 Voice note' : (newMsg.type === 'image' ? '📷 Photo' : (newMsg.type === 'video' ? '🎥 Video' : newMsg.content)))
         : 'Attachment';
       this.visitors[msg.visitorId].lastActive = newMsg.timestamp;
-      writeJSON(VISITORS_FILE, this.visitors);
+      writeJSON(this.visitorsFile, this.visitors);
     }
 
-    writeJSON(MESSAGES_FILE, this.messages);
+    writeJSON(this.messagesFile, this.messages);
     return newMsg;
   }
 
@@ -476,18 +495,18 @@ class Storage {
       }
     }
     if (changed) {
-      writeJSON(MESSAGES_FILE, this.messages);
+      writeJSON(this.messagesFile, this.messages);
     }
     return true;
   }
 
   clearConversation(visitorId) {
     this.messages = this.messages.filter(m => m.visitorId !== visitorId);
-    writeJSON(MESSAGES_FILE, this.messages);
+    writeJSON(this.messagesFile, this.messages);
     if (this.visitors[visitorId]) {
       this.visitors[visitorId].lastMessage = '';
       this.visitors[visitorId].unreadCount = 0;
-      writeJSON(VISITORS_FILE, this.visitors);
+      writeJSON(this.visitorsFile, this.visitors);
     }
     return true;
   }
@@ -495,13 +514,178 @@ class Storage {
   deleteVisitor(visitorId) {
     if (this.visitors[visitorId]) {
       delete this.visitors[visitorId];
-      writeJSON(VISITORS_FILE, this.visitors);
+      writeJSON(this.visitorsFile, this.visitors);
     }
     this.messages = this.messages.filter(m => m.visitorId !== visitorId);
-    writeJSON(MESSAGES_FILE, this.messages);
+    writeJSON(this.messagesFile, this.messages);
     return true;
   }
 }
 
-const storage = new Storage();
-module.exports = storage;
+// Master Multi-Tenant Manager
+class StorageManager {
+  constructor() {
+    this.defaultStorage = new Storage(DATA_DIR, 'default');
+    this.tenantCache = new Map();
+    this.tenantCache.set('default', this.defaultStorage);
+  }
+
+  // Get or initialize tenant storage
+  getTenant(tenantId = 'default') {
+    const cleanId = (tenantId || 'default').toLowerCase().trim();
+    if (cleanId === 'default' || !cleanId) {
+      return this.defaultStorage;
+    }
+
+    if (this.tenantCache.has(cleanId)) {
+      return this.tenantCache.get(cleanId);
+    }
+
+    const tenantDirPath = path.join(TENANTS_DIR, cleanId);
+    const tenantStorage = new Storage(tenantDirPath, cleanId);
+    this.tenantCache.set(cleanId, tenantStorage);
+
+    // Auto-register in tenants.json if not present
+    this.ensureTenantRegistered(cleanId);
+
+    return tenantStorage;
+  }
+
+  // Registry of tenants
+  getTenantsList() {
+    return readJSON(TENANTS_FILE, []);
+  }
+
+  ensureTenantRegistered(tenantId, name = '') {
+    const list = this.getTenantsList();
+    if (!list.find(t => t.id === tenantId)) {
+      list.push({
+        id: tenantId,
+        subdomain: tenantId,
+        name: name || `Client: ${tenantId}`,
+        createdAt: new Date().toISOString(),
+        active: true
+      });
+      writeJSON(TENANTS_FILE, list);
+    }
+  }
+
+  createTenant({ id, name, username, password }) {
+    const cleanId = (id || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').trim();
+    if (!cleanId) throw new Error('Invalid subdomain identifier');
+
+    const list = this.getTenantsList();
+    if (list.find(t => t.id === cleanId)) {
+      throw new Error(`Subdomain "${cleanId}" already exists!`);
+    }
+
+    const tenantDir = path.join(TENANTS_DIR, cleanId);
+    if (!fs.existsSync(tenantDir)) {
+      fs.mkdirSync(tenantDir, { recursive: true });
+    }
+
+    const tenantStorage = new Storage(tenantDir, cleanId);
+    
+    // Customize tenant brand settings
+    tenantStorage.updateSettings({
+      brandName: name || cleanId,
+      brandSubtitle: `${name || cleanId} Official WhatsApp`
+    });
+
+    // Set custom tenant admin credentials
+    tenantStorage.updateCredentials(username || 'admin', password || 'Rizwan@410');
+
+    this.tenantCache.set(cleanId, tenantStorage);
+
+    const newRecord = {
+      id: cleanId,
+      subdomain: cleanId,
+      name: name || cleanId,
+      createdAt: new Date().toISOString(),
+      active: true
+    };
+    list.push(newRecord);
+    writeJSON(TENANTS_FILE, list);
+
+    return newRecord;
+  }
+
+  deleteTenant(id) {
+    const cleanId = (id || '').toLowerCase().trim();
+    if (cleanId === 'default') throw new Error('Cannot delete default master tenant');
+
+    let list = this.getTenantsList();
+    list = list.filter(t => t.id !== cleanId);
+    writeJSON(TENANTS_FILE, list);
+
+    this.tenantCache.delete(cleanId);
+
+    const tenantDir = path.join(TENANTS_DIR, cleanId);
+    if (fs.existsSync(tenantDir)) {
+      try {
+        fs.rmSync(tenantDir, { recursive: true, force: true });
+      } catch (e) {
+        console.error('Error removing tenant dir:', e);
+      }
+    }
+    return true;
+  }
+
+  // Global Session Manager
+  createSession(tenantId, username) {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days session
+    activeSessions.set(token, {
+      tenantId: (tenantId || 'default').toLowerCase(),
+      username: username || 'admin',
+      expiresAt
+    });
+    return token;
+  }
+
+  verifySession(token) {
+    if (!token) return null;
+    const session = activeSessions.get(token);
+    if (!session) return null;
+    if (Date.now() > session.expiresAt) {
+      activeSessions.delete(token);
+      return null;
+    }
+    return session;
+  }
+
+  destroySession(token) {
+    if (token) activeSessions.delete(token);
+    return true;
+  }
+
+  // --- Delegate default tenant operations for backwards compatibility ---
+  getSettings() { return this.defaultStorage.getSettings(); }
+  updateSettings(s) { return this.defaultStorage.updateSettings(s); }
+  getFlows() { return this.defaultStorage.getFlows(); }
+  getFlowById(id) { return this.defaultStorage.getFlowById(id); }
+  saveFlow(f) { return this.defaultStorage.saveFlow(f); }
+  deleteFlow(id) { return this.defaultStorage.deleteFlow(id); }
+  getQuickReplies() { return this.defaultStorage.getQuickReplies(); }
+  getQuickReplyById(id) { return this.defaultStorage.getQuickReplyById(id); }
+  saveQuickReplies(q) { return this.defaultStorage.saveQuickReplies(q); }
+  getVisitors() { return this.defaultStorage.getVisitors(); }
+  getVisitor(id) { return this.defaultStorage.getVisitor(id); }
+  saveVisitor(v) { return this.defaultStorage.saveVisitor(v); }
+  updateVisitorPhone(id, p) { return this.defaultStorage.updateVisitorPhone(id, p); }
+  updateVisitorProfile(id, p) { return this.defaultStorage.updateVisitorProfile(id, p); }
+  setBotPaused(id, p) { return this.defaultStorage.setBotPaused(id, p); }
+  resetUnread(id) { return this.defaultStorage.resetUnread(id); }
+  incrementUnread(id) { return this.defaultStorage.incrementUnread(id); }
+  getMessages(id) { return this.defaultStorage.getMessages(id); }
+  addMessage(m) { return this.defaultStorage.addMessage(m); }
+  markMessagesRead(id, s) { return this.defaultStorage.markMessagesRead(id, s); }
+  clearConversation(id) { return this.defaultStorage.clearConversation(id); }
+  deleteVisitor(id) { return this.defaultStorage.deleteVisitor(id); }
+  verifyCredentials(u, p) { return this.defaultStorage.verifyCredentials(u, p); }
+  updateCredentials(u, p) { return this.defaultStorage.updateCredentials(u, p); }
+  getAuth() { return this.defaultStorage.getAuth(); }
+}
+
+const masterStorage = new StorageManager();
+module.exports = masterStorage;

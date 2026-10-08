@@ -42,5 +42,29 @@
     "voiceDuration": 0,
     "timestamp": "2026-10-07T20:29:45.699Z",
     "status": "delivered"
+  },
+  {
+    "id": "msg_1791472451357_cm4jxb",
+    "visitorId": "vis_tt_1791472449853",
+    "sender": "visitor",
+    "type": "text",
+    "content": "Special promo price kya hai?",
+    "caption": "",
+    "voiceDuration": 0,
+    "isForwarded": false,
+    "timestamp": "2026-10-08T15:14:11.357Z",
+    "status": "delivered"
+  },
+  {
+    "id": "msg_1791472452864_accj76",
+    "visitorId": "vis_fb_1791472449854",
+    "sender": "admin",
+    "type": "text",
+    "content": "Special promo price kya hai? (Forwarded to team)",
+    "caption": "",
+    "voiceDuration": 0,
+    "isForwarded": true,
+    "timestamp": "2026-10-08T15:14:12.864Z",
+    "status": "delivered"
   }
 ]

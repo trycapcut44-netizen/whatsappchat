@@ -22,16 +22,40 @@
     } catch (e) {}
   }
 
-  // --- Session & State ---
-  let visitorId = localStorage.getItem('wa_visitor_id') || getCookie('wa_visitor_id');
+  const urlParams = new URLSearchParams(window.location.search);
+
+  // --- Subdomain / Tenant Resolution ---
+  function getTenantFromLocation() {
+    const pTenant = urlParams.get('tenant');
+    if (pTenant) {
+      localStorage.setItem('wa_tenant_id', pTenant);
+      return pTenant.toLowerCase().trim();
+    }
+    const host = window.location.hostname || '';
+    const parts = host.split('.');
+    if (parts.length > 2 && parts[0] !== 'www' && !/^[0-9.]+$/.test(host)) {
+      return parts[0].toLowerCase().trim();
+    }
+    return localStorage.getItem('wa_tenant_id') || 'default';
+  }
+  const currentTenantId = getTenantFromLocation();
+
+  // --- Session & State (Isolated per tenant) ---
+  const vidKey = 'wa_visitor_id_' + currentTenantId;
+  let visitorId = localStorage.getItem(vidKey) || getCookie(vidKey);
   if (!visitorId) {
-    visitorId = 'vis_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+    // Check legacy key if default tenant
+    if (currentTenantId === 'default' && (localStorage.getItem('wa_visitor_id') || getCookie('wa_visitor_id'))) {
+      visitorId = localStorage.getItem('wa_visitor_id') || getCookie('wa_visitor_id');
+    } else {
+      visitorId = 'vis_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+    }
   }
   // Store in both localStorage and cookie so it never expires or resets
-  localStorage.setItem('wa_visitor_id', visitorId);
-  setCookie('wa_visitor_id', visitorId, 365);
+  localStorage.setItem(vidKey, visitorId);
+  setCookie(vidKey, visitorId, 365);
 
-  const CACHE_KEY = 'wa_cached_messages_' + visitorId;
+  const CACHE_KEY = 'wa_cached_messages_' + currentTenantId + '_' + visitorId;
 
   function getCachedMessages() {
     try {
@@ -58,19 +82,23 @@
     } catch (e) {}
   }
 
-  const urlParams = new URLSearchParams(window.location.search);
   const utmSource = urlParams.get('utm_source') || urlParams.get('source') || (document.referrer ? 'Referrer: ' + new URL(document.referrer).hostname : 'Direct Traffic');
-  const visitorProfileName = urlParams.get('name') || urlParams.get('username') || urlParams.get('tt_name') || urlParams.get('user') || localStorage.getItem('wa_user_name') || '';
-  const visitorAvatar = urlParams.get('avatar') || urlParams.get('dp') || urlParams.get('pic') || localStorage.getItem('wa_user_avatar') || '';
+  const visitorProfileName = urlParams.get('name') || urlParams.get('username') || urlParams.get('tt_name') || urlParams.get('user') || localStorage.getItem('wa_user_name_' + currentTenantId) || '';
+  const visitorAvatar = urlParams.get('avatar') || urlParams.get('dp') || urlParams.get('pic') || localStorage.getItem('wa_user_avatar_' + currentTenantId) || '';
   const visitorPlatform = urlParams.get('platform') || '';
 
-  if (visitorProfileName) localStorage.setItem('wa_user_name', visitorProfileName);
-  if (visitorAvatar) localStorage.setItem('wa_user_avatar', visitorAvatar);
+  if (visitorProfileName) localStorage.setItem('wa_user_name_' + currentTenantId, visitorProfileName);
+  if (visitorAvatar) localStorage.setItem('wa_user_avatar_' + currentTenantId, visitorAvatar);
 
-  // Clean tracking query parameters from address bar for neat appearance
+  // Clean tracking query parameters from address bar for neat appearance, keeping tenant if present
   if (window.history && window.history.replaceState && window.location.search) {
     try {
-      window.history.replaceState({}, document.title, window.location.pathname);
+      const remainingParams = new URLSearchParams();
+      if (urlParams.get('tenant')) {
+        remainingParams.set('tenant', urlParams.get('tenant'));
+      }
+      const newQuery = remainingParams.toString() ? '?' + remainingParams.toString() : '';
+      window.history.replaceState({}, document.title, window.location.pathname + newQuery);
     } catch (e) {}
   }
 
@@ -322,7 +350,11 @@
 
   // --- Socket Connection ---
   function connectSocket() {
-    socket = io();
+    socket = io({
+      query: {
+        tenantId: currentTenantId
+      }
+    });
 
     socket.on('connect', () => {
       socket.emit('visitor:join', {
