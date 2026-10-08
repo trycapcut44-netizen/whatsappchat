@@ -133,6 +133,10 @@
   const waPopupMessage = document.getElementById('waPopupMessage');
   const waPopupCloseBtn = document.getElementById('waPopupCloseBtn');
   const waIncomingAudio = document.getElementById('waIncomingAudio');
+  // Notification Permission Banner Elements
+  const notifPermissionBanner = document.getElementById('notifPermissionBanner');
+  const enableNotifBtn = document.getElementById('enableNotifBtn');
+  const dismissNotifBtn = document.getElementById('dismissNotifBtn');
   let popupDismissTimer = null;
 
   // WhatsApp Interactive Quick-Reply Modal Elements
@@ -274,13 +278,58 @@
     window.addEventListener(evt, initAudioContext, { once: true });
   });
 
-  // Request browser notification permission gently on first interaction
-  function requestNotificationPermission() {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {});
+  // Request browser notification permission with user gesture
+  async function requestNotificationPermission() {
+    try {
+      if ('Notification' in window && Notification.permission === 'default') {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted' && notifPermissionBanner) {
+          notifPermissionBanner.style.display = 'none';
+        }
+        return perm;
+      }
+      return 'Notification' in window ? Notification.permission : 'unsupported';
+    } catch (e) {
+      return 'denied';
     }
   }
-  window.addEventListener('click', requestNotificationPermission, { once: true });
+
+  // Check and display the friendly WhatsApp Notification banner if not yet granted
+  function checkNotificationBanner() {
+    try {
+      if ('Notification' in window && Notification.permission === 'default') {
+        if (!sessionStorage.getItem('wa_notif_banner_dismissed')) {
+          setTimeout(() => {
+            if (notifPermissionBanner) notifPermissionBanner.style.display = 'flex';
+          }, 1500);
+        }
+      }
+    } catch (e) {}
+  }
+  window.addEventListener('load', checkNotificationBanner);
+
+  if (enableNotifBtn) {
+    enableNotifBtn.addEventListener('click', async () => {
+      const perm = await requestNotificationPermission();
+      if (perm === 'granted') {
+        if (notifPermissionBanner) notifPermissionBanner.style.display = 'none';
+        triggerHaptic();
+      }
+    });
+  }
+
+  if (dismissNotifBtn) {
+    dismissNotifBtn.addEventListener('click', () => {
+      if (notifPermissionBanner) notifPermissionBanner.style.display = 'none';
+      sessionStorage.setItem('wa_notif_banner_dismissed', '1');
+    });
+  }
+
+  window.addEventListener('click', () => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      requestNotificationPermission().catch(() => {});
+    }
+  }, { once: true });
 
   // Floating In-App WhatsApp Popup Notification
   function showWhatsAppPopupNotification(msg) {
@@ -333,32 +382,78 @@
     });
   }
 
-  // System Browser / Desktop Push Notification (when in background)
-  function showSystemBrowserNotification(msg) {
+  // System Browser & Mobile Home Screen Notification (Android/iOS Heads-up popup)
+  async function showSystemBrowserNotification(msg) {
     try {
-      if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
-        let snippet = msg.content || 'New message';
-        if (msg.type === 'voice') snippet = '🎤 Voice note (' + (msg.voiceDuration || 10) + 's)';
-        else if (msg.type === 'image') snippet = '📸 Photo attachment';
-        else if (msg.type === 'video') snippet = '🎥 Video demo';
+      if (!('Notification' in window)) return;
 
-        const notif = new Notification(settings.brandName || 'WhatsApp Business', {
-          body: snippet,
-          icon: settings.brandAvatar || '/assets/icon-192.png',
-          badge: '/assets/icon-192.png',
-          tag: 'wa_msg_' + Date.now(),
-          renotify: true
-        });
+      // If permission is still default, request it
+      if (Notification.permission === 'default') {
+        try {
+          await Notification.requestPermission();
+        } catch (e) {}
+      }
 
+      if (Notification.permission !== 'granted') return;
+
+      let snippet = msg.content || 'New message';
+      if (msg.type === 'voice') snippet = '🎤 Voice note (' + (msg.voiceDuration || 10) + 's)';
+      else if (msg.type === 'image') snippet = '📸 Photo attachment' + (msg.caption ? ': ' + msg.caption : '');
+      else if (msg.type === 'video') snippet = '🎥 Video demo';
+
+      const brandName = settings.brandName || 'WhatsApp Business';
+      const notifOptions = {
+        body: snippet,
+        icon: '/assets/icon-192.png',
+        badge: '/assets/icon-192.png',
+        tag: 'wa_msg_' + (msg.visitorId || 'chat'),
+        renotify: true,
+        silent: false,
+        vibrate: [250, 100, 250, 100, 250],
+        requireInteraction: true,
+        data: {
+          url: window.location.href,
+          msg: msg,
+          timestamp: Date.now()
+        },
+        actions: [
+          { action: 'reply', title: '💬 Reply' },
+          { action: 'open', title: 'Open Chat' }
+        ]
+      };
+
+      // Always save pending reply to localStorage so opening chat immediately shows popup
+      try {
+        localStorage.setItem('wa_pending_admin_reply', JSON.stringify(msg));
+      } catch (e) {}
+
+      // Method 1 (Mobile & Android Chrome): ServiceWorkerRegistration.showNotification
+      if ('serviceWorker' in navigator) {
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          if (reg && typeof reg.showNotification === 'function') {
+            await reg.showNotification(brandName, notifOptions);
+            return;
+          }
+        } catch (swErr) {
+          console.warn('SW showNotification error:', swErr);
+        }
+      }
+
+      // Method 2 (Desktop browsers fallback): Window Notification constructor
+      try {
+        const notif = new Notification(brandName, notifOptions);
         notif.onclick = function () {
           window.focus();
-          if (msg.sender === 'admin' || pendingAdminReply) {
-            showInteractiveReplyPopup(msg);
-          }
+          showInteractiveReplyPopup(msg);
           notif.close();
         };
+      } catch (winErr) {
+        console.warn('Window Notification error:', winErr);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('showSystemBrowserNotification outer error:', e);
+    }
   }
 
   // --- Tab Title Notification Alert ---
@@ -386,6 +481,10 @@
     if (!waInteractivePopupBackdrop || !msg) return;
 
     pendingAdminReply = msg;
+    try {
+      localStorage.setItem('wa_pending_admin_reply', JSON.stringify(msg));
+    } catch (e) {}
+
     const brandName = settings.brandName || 'WhatsApp Business';
     const brandAvatar = settings.brandAvatar || '/assets/whatsapp-business.svg';
 
@@ -467,6 +566,9 @@
     waInteractivePopupBackdrop.style.display = 'none';
     isInteractivePopupOpen = false;
     stopTabTitleNotification();
+    try {
+      localStorage.removeItem('wa_pending_admin_reply');
+    } catch (e) {}
   }
 
   if (waInteractiveCloseBtn) {
@@ -480,6 +582,9 @@
     waInteractiveOpenChatBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       pendingAdminReply = null;
+      try {
+        localStorage.removeItem('wa_pending_admin_reply');
+      } catch (err) {}
       hideInteractiveReplyPopup();
       scrollToBottom();
       if (messageInput) messageInput.focus();
@@ -503,6 +608,9 @@
       sendVisitorMessage(replyText);
       if (waInteractiveInput) waInteractiveInput.value = '';
       pendingAdminReply = null;
+      try {
+        localStorage.removeItem('wa_pending_admin_reply');
+      } catch (err) {}
       hideInteractiveReplyPopup();
       scrollToBottom();
       if (messageInput) messageInput.focus();
@@ -930,6 +1038,15 @@
 
     playOutgoingPop();
 
+    // Ensure notification permission is requested on user gesture so they receive mobile replies
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(perm => {
+        if (perm === 'granted' && notifPermissionBanner) {
+          notifPermissionBanner.style.display = 'none';
+        }
+      }).catch(() => {});
+    }
+
     socket.emit('visitor:message', {
       visitorId: visitorId,
       text: cleanText,
@@ -1214,7 +1331,7 @@
   const pwaInstallBtn = document.getElementById('pwaInstallBtn');
   const pwaDismissBtn = document.getElementById('pwaDismissBtn');
 
-  // Register Service Worker
+  // Register Service Worker & Listen for notification clicks from background
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js').then((reg) => {
@@ -1222,6 +1339,45 @@
       }).catch((err) => {
         console.log('Service Worker registration note:', err);
       });
+    });
+
+    // Listen to messages from Service Worker (e.g. user tapped notification on mobile home screen)
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'OPEN_REPLY_POPUP') {
+        const msg = event.data.msg || pendingAdminReply;
+        if (msg) {
+          showInteractiveReplyPopup(msg);
+        }
+      }
+    });
+  }
+
+  // Check if opened via push notification or URL parameter ?open_reply=true
+  function checkUrlForReplyPopup() {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('open_reply') === 'true' || urlParams.get('reply') === '1') {
+        const saved = localStorage.getItem('wa_pending_admin_reply');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setTimeout(() => {
+            showInteractiveReplyPopup(parsed);
+          }, 400);
+        }
+      }
+    } catch (e) {}
+  }
+  window.addEventListener('DOMContentLoaded', checkUrlForReplyPopup);
+
+  // Top header back button action
+  const headerBackBtn = document.querySelector('.back-btn');
+  if (headerBackBtn) {
+    headerBackBtn.addEventListener('click', () => {
+      if (window.history.length > 2) {
+        window.history.back();
+      } else {
+        window.blur();
+      }
     });
   }
 

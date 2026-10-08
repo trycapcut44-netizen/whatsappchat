@@ -349,6 +349,10 @@
         platformBadge = '<span class="platform-badge badge-facebook" style="font-size: 10px; background: #1877f2; color: #fff; padding: 1px 5px; border-radius: 4px; margin-left: 5px;">🔵 FB</span>';
       }
 
+      const botBadge = v.botPaused 
+        ? '<span class="vis-bot-badge vis-bot-stopped" title="Bot: Stopped / Inactive">🛑 Bot Off</span>'
+        : '<span class="vis-bot-badge vis-bot-active" title="Bot: Active">🤖 Bot On</span>';
+
       item.innerHTML = `
         <div class="visitor-item-avatar">
           <img src="${avatarSrc}" alt="Avatar">
@@ -361,7 +365,10 @@
           </div>
           <div class="visitor-item-row2">
             <span class="visitor-item-snippet">${hasPhone ? '📱 ' : ''}${escapeHtml(snippet)}</span>
-            ${v.unreadCount > 0 ? `<span class="unread-badge">${v.unreadCount}</span>` : ''}
+            <div class="visitor-item-badges">
+              ${botBadge}
+              ${v.unreadCount > 0 ? `<span class="unread-badge">${v.unreadCount}</span>` : ''}
+            </div>
           </div>
         </div>
       `;
@@ -431,11 +438,13 @@
 
     // Bot toggle button state
     if (vis.botPaused) {
-      toggleVisitorBotBtn.textContent = '⏸️ Bot: Paused (Takeover)';
+      toggleVisitorBotBtn.textContent = '🛑 Bot: Inactive (Click to Activate)';
       toggleVisitorBotBtn.classList.add('paused');
+      toggleVisitorBotBtn.title = 'Bot is Stopped/Inactive for this user. Click to Activate Bot.';
     } else {
-      toggleVisitorBotBtn.textContent = '🤖 Bot: Active';
+      toggleVisitorBotBtn.textContent = '🤖 Bot: Active (Click to Stop)';
       toggleVisitorBotBtn.classList.remove('paused');
+      toggleVisitorBotBtn.title = 'Bot is Active for this user. Click to Stop/Inactivate Bot.';
     }
   }
 

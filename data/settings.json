@@ -3,7 +3,7 @@
   "brandStatus": "Online",
   "brandSubtitle": "Official Business Account",
   "brandAvatar": "/uploads/file-1791404933496-954088728.jpeg",
-  "botActive": false,
+  "botActive": true,
   "soundEnabled": true,
   "phonePromptEnabled": true,
   "phonePromptMessage": "💬 In case our chat gets interrupted, please share your WhatsApp or Mobile number so we can reach you:",

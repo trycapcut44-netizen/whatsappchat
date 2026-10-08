@@ -355,6 +355,34 @@ input:checked + .slider:before {
   max-width: 170px;
 }
 
+.visitor-item-badges {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.vis-bot-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+
+.vis-bot-stopped {
+  background: #fde8e8;
+  color: #c81e1e;
+  border: 1px solid #f8b4b4;
+}
+
+.vis-bot-active {
+  background: #def7ec;
+  color: #03543f;
+  border: 1px solid #84e1bc;
+}
+
 .unread-badge {
   background: var(--accent-green);
   color: #fff;

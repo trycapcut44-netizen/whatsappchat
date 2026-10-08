@@ -422,7 +422,9 @@ class Storage {
 
   saveVisitor(visitorData) {
     const existing = this.visitors[visitorData.id] || {};
+    const defaultBotPaused = existing.botPaused !== undefined ? existing.botPaused : true;
     this.visitors[visitorData.id] = {
+      botPaused: defaultBotPaused,
       ...existing,
       ...visitorData,
       lastActive: new Date().toISOString()

@@ -440,6 +440,19 @@ app.post('/api/visitors/:id/toggle-bot', requireAdminAuth, (req, res) => {
   const visitor = tenantStorage.setBotPaused(req.params.id, botPaused);
   if (botPaused) {
     cancelVisitorFlow(tenantId, req.params.id);
+  } else {
+    // If admin explicitly activates bot for this visitor, trigger welcome funnel if they haven't received it
+    const settings = tenantStorage.getSettings();
+    if (settings.autoWelcome) {
+      const messages = tenantStorage.getMessages(req.params.id);
+      const hasBotMsg = messages.some(m => m.sender === 'bot');
+      if (!hasBotMsg) {
+        const welcomeFlow = tenantStorage.flows.find(f => f.triggerType === 'welcome' && f.enabled);
+        if (welcomeFlow) {
+          triggerFlow(tenantId, req.params.id, welcomeFlow);
+        }
+      }
+    }
   }
   io.to(`admin_room_${tenantId}`).emit('visitor:updated', visitor);
   res.json({ success: true, visitor });
@@ -520,7 +533,7 @@ io.on('connection', (socket) => {
         phone: '',
         createdAt: new Date().toISOString(),
         isOnline: true,
-        botPaused: false,
+        botPaused: true,
         unreadCount: 0,
         source: source || (referrer ? new URL(referrer).hostname : (detectedPlatform === 'tiktok' ? 'TikTok Ads' : (detectedPlatform === 'facebook' ? 'Facebook Ads' : 'Direct Traffic')))
       });
@@ -549,7 +562,7 @@ io.on('connection', (socket) => {
     io.to(`admin_room_${tenantId}`).emit('visitor:updated', visitor);
 
     if (isNewVisitor || messages.length === 0) {
-      if (settings.botActive && settings.autoWelcome) {
+      if (settings.botActive && settings.autoWelcome && !visitor.botPaused) {
         const welcomeFlow = tenantStorage.flows.find(f => f.triggerType === 'welcome' && f.enabled);
         if (welcomeFlow) {
           setTimeout(() => {
@@ -578,7 +591,7 @@ io.on('connection', (socket) => {
         phone: phoneMatch ? phoneMatch[0].trim() : '',
         createdAt: new Date().toISOString(),
         isOnline: true,
-        botPaused: false,
+        botPaused: true,
         unreadCount: 1,
         source: 'Direct / Ads'
       });
@@ -657,7 +670,7 @@ io.on('connection', (socket) => {
         phone,
         createdAt: new Date().toISOString(),
         isOnline: true,
-        botPaused: false,
+        botPaused: true,
         unreadCount: 0,
         source: 'Direct / Ads'
       });
