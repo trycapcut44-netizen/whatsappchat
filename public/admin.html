@@ -444,6 +444,13 @@
             <button type="button" class="btn-primary" id="openCreateTenantModalBtn" onclick="window.openCreateTenantModal()">+ Add New Client / Subdomain</button>
           </div>
 
+          <div class="dns-guidance-pill" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: #1e3a8a; display: flex; align-items: flex-start; gap: 10px;">
+            <span style="font-size: 18px;">💡</span>
+            <div>
+              <strong>Instant Live Links:</strong> Direct links (e.g. <code>https://joyup.shop/?tenant=handle</code>) work 100% instantly. If you want custom subdomains (e.g. <code>handle.joyup.shop</code>), add a 1-time <strong>CNAME</strong> record in Hostinger DNS with Name: <code>*</code> pointing to <code>@</code>.
+            </div>
+          </div>
+
           <div class="tenants-grid" id="tenantsGrid">
             <!-- Dynamically populated tenant cards -->
           </div>

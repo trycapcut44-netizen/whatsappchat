@@ -2140,36 +2140,37 @@
         const card = document.createElement('div');
         card.className = 'tenant-card';
 
-        const chatUrl = isLocal 
-          ? `${window.location.protocol}//${hostBase}/?tenant=${t.subdomain}`
-          : `${window.location.protocol}//${t.subdomain}.${hostBase}/`;
-
-        const adminUrl = isLocal 
-          ? `${window.location.protocol}//${hostBase}/admin?tenant=${t.subdomain}`
-          : `${window.location.protocol}//${t.subdomain}.${hostBase}/admin`;
+        const directChatUrl = `${window.location.protocol}//${hostBase}/?tenant=${t.subdomain}`;
+        const directAdminUrl = `${window.location.protocol}//${hostBase}/admin?tenant=${t.subdomain}`;
+        const subdomainChatUrl = isLocal ? directChatUrl : `${window.location.protocol}//${t.subdomain}.${hostBase}/`;
 
         card.innerHTML = `
           <div class="tenant-card-header">
             <div>
               <div class="tenant-card-title">🏢 ${escapeHtml(t.name || t.subdomain)}</div>
-              <div class="tenant-card-sub">Subdomain: <strong>${escapeHtml(t.subdomain)}</strong></div>
+              <div class="tenant-card-sub">Handle: <strong>${escapeHtml(t.subdomain)}</strong></div>
             </div>
             <span style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 12px; background: #e7f7ed; color: #0b8043;">Active</span>
           </div>
 
           <div class="tenant-link-box">
             <div class="tenant-link-row">
-              <span class="tenant-link-label">Chat Link:</span>
-              <a href="${chatUrl}" target="_blank" class="tenant-link-url">${chatUrl}</a>
+              <span class="tenant-link-label">Direct Chat (Instant):</span>
+              <a href="${directChatUrl}" target="_blank" class="tenant-link-url">${directChatUrl}</a>
             </div>
             <div class="tenant-link-row">
               <span class="tenant-link-label">Admin Portal:</span>
-              <a href="${adminUrl}" target="_blank" class="tenant-link-url">${adminUrl}</a>
+              <a href="${directAdminUrl}" target="_blank" class="tenant-link-url">${directAdminUrl}</a>
             </div>
+            ${!isLocal ? `
+            <div class="tenant-link-row" style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #e2e8f0;">
+              <span class="tenant-link-label" title="Requires CNAME record in Hostinger">Custom Subdomain:</span>
+              <a href="${subdomainChatUrl}" target="_blank" class="tenant-link-url" style="color: #64748b;">${subdomainChatUrl}</a>
+            </div>` : ''}
           </div>
 
           <div class="tenant-card-actions">
-            <a href="${adminUrl}" target="_blank" class="btn-open-portal">Open Portal ↗</a>
+            <a href="${directAdminUrl}" target="_blank" class="btn-open-portal">Open Portal ↗</a>
             <button type="button" class="btn-del-tenant" data-tenant-id="${t.id}">🗑 Delete</button>
           </div>
         `;
