@@ -56,7 +56,7 @@
         <button class="nav-tab" data-tab="tab-settings">
           <span class="tab-icon">⚙️</span> Settings & Leads
         </button>
-        <button class="nav-tab" data-tab="tab-tenants" id="navTabTenants">
+        <button class="nav-tab" data-tab="tab-tenants" id="navTabTenants" onclick="if(window.loadTenantsList) window.loadTenantsList()">
           <span class="tab-icon">🏢</span> Subdomains / Clients
         </button>
       </nav>
@@ -441,7 +441,7 @@
               <h2>🏢 Multi-Tenant Client Subdomains</h2>
               <p class="subtext">Create and manage isolated WhatsApp chat stores for multiple clients / brands.</p>
             </div>
-            <button type="button" class="btn-primary" id="openCreateTenantModalBtn">+ Add New Client / Subdomain</button>
+            <button type="button" class="btn-primary" id="openCreateTenantModalBtn" onclick="window.openCreateTenantModal()">+ Add New Client / Subdomain</button>
           </div>
 
           <div class="tenants-grid" id="tenantsGrid">
@@ -708,13 +708,13 @@
     <div class="modal-container tenant-modal-container" style="max-width: 480px;">
       <div class="modal-header">
         <h3>➕ Add New Client / Subdomain</h3>
-        <button class="modal-close-btn" id="closeCreateTenantModal">&times;</button>
+        <button type="button" class="modal-close-btn" id="closeCreateTenantModal" onclick="window.closeCreateTenantModal()">&times;</button>
       </div>
 
       <div class="modal-body">
         <div class="form-group">
           <label>Subdomain Handle (Unique slug, e.g. "client1" or "store1")</label>
-          <input type="text" id="modalTenantSlug" placeholder="e.g. client1" required>
+          <input type="text" id="modalTenantSlug" placeholder="e.g. client1" required autocomplete="off">
           <div style="font-size: 11.5px; color: #8696a0; margin-top: 4px;">
             Chat URL will be: <strong>{slug}.joyup.shop</strong> or <strong>/?tenant={slug}</strong>
           </div>
@@ -722,24 +722,24 @@
 
         <div class="form-group">
           <label>Client / Brand Business Name</label>
-          <input type="text" id="modalTenantName" placeholder="e.g. Al-Rehman Electronics" required>
+          <input type="text" id="modalTenantName" placeholder="e.g. Al-Rehman Electronics" required autocomplete="off">
         </div>
 
         <div class="form-row">
           <div class="form-group flex-1">
             <label>Admin Username</label>
-            <input type="text" id="modalTenantUsername" value="admin" required>
+            <input type="text" id="modalTenantUsername" value="admin" required autocomplete="off">
           </div>
           <div class="form-group flex-1">
             <label>Admin Password</label>
-            <input type="text" id="modalTenantPassword" value="Rizwan@410" required>
+            <input type="text" id="modalTenantPassword" value="Rizwan@410" required autocomplete="off">
           </div>
         </div>
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn-secondary" id="cancelCreateTenantModal">Cancel</button>
-        <button type="button" class="btn-primary" id="saveCreateTenantBtn">Create Subdomain & Store</button>
+        <button type="button" class="btn-secondary" id="cancelCreateTenantModal" onclick="window.closeCreateTenantModal()">Cancel</button>
+        <button type="button" class="btn-primary" id="saveCreateTenantBtn" onclick="window.saveCreateTenant()">Create Subdomain & Store</button>
       </div>
     </div>
   </div>

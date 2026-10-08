@@ -32,8 +32,36 @@ function verifyPassword(password, storedHash) {
   return hash === originalHash;
 }
 
-// In-Memory Active Sessions Store: token -> { tenantId, username, expiresAt }
+// In-Memory & Persistent Active Sessions Store: token -> { tenantId, username, expiresAt }
+const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
 const activeSessions = new Map();
+
+function loadPersistedSessions() {
+  try {
+    const data = readJSON(SESSIONS_FILE, {});
+    const now = Date.now();
+    for (const [token, sess] of Object.entries(data)) {
+      if (sess && sess.expiresAt > now) {
+        activeSessions.set(token, sess);
+      }
+    }
+  } catch (e) {}
+}
+
+function savePersistedSessions() {
+  try {
+    const obj = {};
+    const now = Date.now();
+    activeSessions.forEach((val, key) => {
+      if (val && val.expiresAt > now) {
+        obj[key] = val;
+      }
+    });
+    writeJSON(SESSIONS_FILE, obj);
+  } catch (e) {}
+}
+
+loadPersistedSessions();
 
 // Default initial data
 const defaultSettings = {
@@ -640,22 +668,31 @@ class StorageManager {
       username: username || 'admin',
       expiresAt
     });
+    savePersistedSessions();
     return token;
   }
 
   verifySession(token) {
     if (!token) return null;
-    const session = activeSessions.get(token);
+    let session = activeSessions.get(token);
+    if (!session) {
+      loadPersistedSessions();
+      session = activeSessions.get(token);
+    }
     if (!session) return null;
     if (Date.now() > session.expiresAt) {
       activeSessions.delete(token);
+      savePersistedSessions();
       return null;
     }
     return session;
   }
 
   destroySession(token) {
-    if (token) activeSessions.delete(token);
+    if (token) {
+      activeSessions.delete(token);
+      savePersistedSessions();
+    }
     return true;
   }
 

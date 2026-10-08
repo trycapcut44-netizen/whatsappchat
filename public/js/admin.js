@@ -206,6 +206,10 @@
       tab.classList.add('active');
       const targetContent = document.getElementById(targetId);
       if (targetContent) targetContent.classList.add('active');
+
+      if (targetId === 'tab-tenants' && typeof window.loadTenantsList === 'function') {
+        window.loadTenantsList();
+      }
     });
   });
 
@@ -2064,24 +2068,68 @@
 
   // --- Subdomains / Multi-Tenant Management Logic ---
   const tenantsGrid = document.getElementById('tenantsGrid');
-  const openCreateTenantModalBtn = document.getElementById('openCreateTenantModalBtn');
   const createTenantModal = document.getElementById('createTenantModal');
-  const closeCreateTenantModal = document.getElementById('closeCreateTenantModal');
-  const cancelCreateTenantModal = document.getElementById('cancelCreateTenantModal');
-  const saveCreateTenantBtn = document.getElementById('saveCreateTenantBtn');
-  const modalTenantSlug = document.getElementById('modalTenantSlug');
-  const modalTenantName = document.getElementById('modalTenantName');
-  const modalTenantUsername = document.getElementById('modalTenantUsername');
-  const modalTenantPassword = document.getElementById('modalTenantPassword');
 
-  async function loadTenantsList() {
-    if (!tenantsGrid) return;
+  window.openCreateTenantModal = function () {
+    const modal = document.getElementById('createTenantModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      const slugInput = document.getElementById('modalTenantSlug');
+      const nameInput = document.getElementById('modalTenantName');
+      if (slugInput) {
+        slugInput.value = '';
+        setTimeout(() => slugInput.focus(), 80);
+      }
+      if (nameInput) nameInput.value = '';
+    }
+  };
+
+  window.closeCreateTenantModal = function () {
+    const modal = document.getElementById('createTenantModal');
+    if (modal) modal.style.display = 'none';
+  };
+
+  window.loadTenantsList = async function () {
+    const grid = document.getElementById('tenantsGrid');
+    if (!grid) return;
+
+    grid.innerHTML = `
+      <div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: #64748b; font-size: 14px;">
+        ⏳ Loading subdomains...
+      </div>
+    `;
+
     try {
-      const res = await fetch('/api/tenants');
+      const token = localStorage.getItem('wa_admin_token') || adminToken;
+      const res = await fetch('/api/tenants?token=' + encodeURIComponent(token), {
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      });
+
+      if (!res.ok) {
+        grid.innerHTML = `
+          <div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: #ea4335; background: #fff5f5; border-radius: 12px; border: 1px solid #fed7d7;">
+            ⚠️ Could not load subdomains (${res.status}). Please check your login session or refresh page.
+          </div>
+        `;
+        return;
+      }
+
       const list = await res.json();
-      tenantsGrid.innerHTML = '';
-      if (!list || list.length === 0) {
-        tenantsGrid.innerHTML = `<div style="grid-column: 1 / -1; padding: 30px; text-align: center; color: #64748b; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e1;">No client subdomains created yet. Click "+ Add New Client / Subdomain" above to create one.</div>`;
+      grid.innerHTML = '';
+
+      if (!Array.isArray(list) || list.length === 0) {
+        grid.innerHTML = `
+          <div style="grid-column: 1 / -1; padding: 40px 20px; text-align: center; color: #54656f; background: #ffffff; border-radius: 14px; border: 2px dashed #cbd5e1;">
+            <div style="font-size: 36px; margin-bottom: 10px;">🏢</div>
+            <h3 style="font-size: 17px; color: #111b21; margin-bottom: 6px; font-weight: 700;">No Client Subdomains Created Yet</h3>
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 18px; max-width: 480px; margin-left: auto; margin-right: auto;">
+              Create isolated WhatsApp chat stores for multiple clients or brands. Each client gets their own chat link, dashboard, and auto-reply funnels.
+            </p>
+            <button type="button" class="btn-primary" onclick="window.openCreateTenantModal()">+ Add New Client / Subdomain</button>
+          </div>
+        `;
         return;
       }
 
@@ -2103,9 +2151,10 @@
         card.innerHTML = `
           <div class="tenant-card-header">
             <div>
-              <div class="tenant-card-title">${escapeHtml(t.name || t.subdomain)}</div>
-              <div class="tenant-card-sub">🏢 Subdomain: ${escapeHtml(t.subdomain)}</div>
+              <div class="tenant-card-title">🏢 ${escapeHtml(t.name || t.subdomain)}</div>
+              <div class="tenant-card-sub">Subdomain: <strong>${escapeHtml(t.subdomain)}</strong></div>
             </div>
+            <span style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 12px; background: #e7f7ed; color: #0b8043;">Active</span>
           </div>
 
           <div class="tenant-link-box">
@@ -2125,75 +2174,107 @@
           </div>
         `;
 
-        card.querySelector('.btn-del-tenant').addEventListener('click', async () => {
-          if (!confirm(`Are you sure you want to delete client "${t.name || t.subdomain}" and all their data?`)) return;
-          try {
-            const delRes = await fetch(`/api/tenants/${t.id}`, { method: 'DELETE' });
-            if (delRes.ok) {
-              loadTenantsList();
+        const delBtn = card.querySelector('.btn-del-tenant');
+        if (delBtn) {
+          delBtn.addEventListener('click', async () => {
+            if (!confirm(`Are you sure you want to delete client "${t.name || t.subdomain}" and all their data?`)) return;
+            try {
+              const token = localStorage.getItem('wa_admin_token') || adminToken;
+              const delRes = await fetch(`/api/tenants/${t.id}?token=` + encodeURIComponent(token), { 
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+              });
+              if (delRes.ok) {
+                window.loadTenantsList();
+              } else {
+                alert('Failed to delete tenant');
+              }
+            } catch (e) {
+              alert('Failed to delete tenant: ' + e.message);
             }
-          } catch (e) {
-            alert('Failed to delete tenant');
-          }
-        });
+          });
+        }
 
-        tenantsGrid.appendChild(card);
+        grid.appendChild(card);
       });
     } catch (e) {
       console.error('Error loading tenants:', e);
+      grid.innerHTML = `
+        <div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: #ea4335;">
+          Failed to load subdomains. Error: ${escapeHtml(e.message)}
+        </div>
+      `;
     }
-  }
+  };
 
+  window.saveCreateTenant = async function () {
+    const slugInput = document.getElementById('modalTenantSlug');
+    const nameInput = document.getElementById('modalTenantName');
+    const userInput = document.getElementById('modalTenantUsername');
+    const passInput = document.getElementById('modalTenantPassword');
+    const saveBtn = document.getElementById('saveCreateTenantBtn');
+
+    const slug = (slugInput ? slugInput.value : '').toLowerCase().replace(/[^a-z0-9_-]/g, '').trim();
+    const name = (nameInput ? nameInput.value : '').trim();
+    const username = (userInput && userInput.value.trim()) ? userInput.value.trim() : 'admin';
+    const password = (passInput && passInput.value) ? passInput.value : 'Rizwan@410';
+
+    if (!slug || !name) {
+      alert('Please enter both Subdomain Handle (e.g. client1) and Client / Brand Business Name.');
+      return;
+    }
+
+    try {
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Creating...';
+      }
+      const token = localStorage.getItem('wa_admin_token') || adminToken;
+      const res = await fetch('/api/tenants?token=' + encodeURIComponent(token), {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ id: slug, name, username, password })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        window.closeCreateTenantModal();
+        window.loadTenantsList();
+        alert(`✅ Client Subdomain "${slug}" created successfully!\n\nChat URL: /?tenant=${slug}\nAdmin Portal: /admin?tenant=${slug}`);
+      } else {
+        alert(data.error || 'Failed to create subdomain.');
+      }
+    } catch (err) {
+      alert('Error creating subdomain: ' + err.message);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Create Subdomain & Store';
+      }
+    }
+  };
+
+  // Attach event listeners as additional backup to inline onclick
+  const openCreateTenantModalBtn = document.getElementById('openCreateTenantModalBtn');
   if (openCreateTenantModalBtn) {
-    openCreateTenantModalBtn.addEventListener('click', () => {
-      createTenantModal.style.display = 'flex';
-      modalTenantSlug.value = '';
-      modalTenantName.value = '';
-    });
+    openCreateTenantModalBtn.addEventListener('click', window.openCreateTenantModal);
   }
 
+  const closeCreateTenantModal = document.getElementById('closeCreateTenantModal');
   if (closeCreateTenantModal) {
-    closeCreateTenantModal.addEventListener('click', () => { createTenantModal.style.display = 'none'; });
+    closeCreateTenantModal.addEventListener('click', window.closeCreateTenantModal);
   }
+
+  const cancelCreateTenantModal = document.getElementById('cancelCreateTenantModal');
   if (cancelCreateTenantModal) {
-    cancelCreateTenantModal.addEventListener('click', () => { createTenantModal.style.display = 'none'; });
+    cancelCreateTenantModal.addEventListener('click', window.closeCreateTenantModal);
   }
 
+  const saveCreateTenantBtn = document.getElementById('saveCreateTenantBtn');
   if (saveCreateTenantBtn) {
-    saveCreateTenantBtn.addEventListener('click', async () => {
-      const slug = (modalTenantSlug.value || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').trim();
-      const name = (modalTenantName.value || '').trim();
-      const username = (modalTenantUsername.value || 'admin').trim();
-      const password = modalTenantPassword.value || 'Rizwan@410';
-
-      if (!slug || !name) {
-        alert('Please provide both a subdomain handle and business name.');
-        return;
-      }
-
-      try {
-        saveCreateTenantBtn.disabled = true;
-        saveCreateTenantBtn.textContent = 'Creating...';
-        const res = await fetch('/api/tenants', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: slug, name, username, password })
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          createTenantModal.style.display = 'none';
-          loadTenantsList();
-          alert(`Client Subdomain "${slug}" created successfully!`);
-        } else {
-          alert(data.error || 'Failed to create subdomain.');
-        }
-      } catch (err) {
-        alert('Error: ' + err.message);
-      } finally {
-        saveCreateTenantBtn.disabled = false;
-        saveCreateTenantBtn.textContent = 'Create Subdomain & Store';
-      }
-    });
+    saveCreateTenantBtn.addEventListener('click', window.saveCreateTenant);
   }
 
   // Initialize

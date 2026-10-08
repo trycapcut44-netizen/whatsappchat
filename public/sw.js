@@ -1,9 +1,7 @@
-const CACHE_NAME = 'wa-business-cache-v1';
+const CACHE_NAME = 'wa-business-cache-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/admin',
-  '/admin.html',
   '/css/chat.css',
   '/css/admin.css',
   '/js/chat.js',
@@ -45,7 +43,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // Do not cache socket.io, upload or API requests
-  if (url.pathname.startsWith('/socket.io/') || url.pathname.startsWith('/api/')) {
+  if (url.pathname.startsWith('/socket.io/') || url.pathname.startsWith('/api/') || url.pathname.startsWith('/admin') || url.pathname.startsWith('/login')) {
     return;
   }
 
