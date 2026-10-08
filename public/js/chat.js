@@ -696,6 +696,8 @@
 
     messageInput.value = '';
     messageInput.style.height = 'auto';
+    const inputBar = document.querySelector('.chat-input-bar');
+    if (inputBar) inputBar.classList.remove('has-text');
     messageInput.focus();
   }
 
@@ -703,6 +705,14 @@
   messageInput.addEventListener('input', () => {
     messageInput.style.height = 'auto';
     messageInput.style.height = Math.min(messageInput.scrollHeight, 90) + 'px';
+    const inputBar = document.querySelector('.chat-input-bar');
+    if (inputBar) {
+      if (messageInput.value.trim().length > 0) {
+        inputBar.classList.add('has-text');
+      } else {
+        inputBar.classList.remove('has-text');
+      }
+    }
   });
 
   messageInput.addEventListener('keydown', (e) => {
