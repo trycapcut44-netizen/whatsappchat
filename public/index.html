@@ -224,6 +224,74 @@
 
   </div>
 
+  <!-- WhatsApp Interactive Quick-Reply Popup Modal -->
+  <div class="wa-interactive-popup-backdrop" id="waInteractivePopupBackdrop" style="display: none;">
+    <div class="wa-interactive-popup" id="waInteractivePopup" role="dialog" aria-modal="true" aria-labelledby="waInteractiveSender">
+      <!-- Popup Header -->
+      <div class="wa-popup-header">
+        <div class="wa-popup-header-left">
+          <div class="wa-popup-avatar-wrap">
+            <img src="/assets/whatsapp-business.svg" id="waInteractiveAvatar" alt="Avatar">
+            <span class="wa-popup-online-dot"></span>
+          </div>
+          <div class="wa-popup-header-info">
+            <div class="wa-popup-title-row">
+              <span class="wa-popup-sender-name" id="waInteractiveSender">WhatsApp Business</span>
+              <svg class="verified-badge" viewBox="0 0 16 16" width="13" height="13" fill="#25D366">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.99-4.99a.75.75 0 0 0-.01-1.05z"/>
+              </svg>
+            </div>
+            <span class="wa-popup-status-subtitle" id="waInteractiveSubtitle">Admin replied to your message</span>
+          </div>
+        </div>
+        <button type="button" class="wa-popup-modal-close" id="waInteractiveCloseBtn" aria-label="Close Popup" title="Close">&times;</button>
+      </div>
+
+      <!-- Popup Message Bubble Body -->
+      <div class="wa-popup-body-area">
+        <div class="wa-popup-bubble-wrap">
+          <div class="wa-popup-bubble-box incoming">
+            <div class="wa-popup-bubble-sender" id="waInteractiveBubbleSender">WhatsApp Business</div>
+            <div class="wa-popup-msg-content" id="waInteractiveMsgContent">
+              <!-- Message content rendered here -->
+            </div>
+            <div class="wa-popup-msg-meta">
+              <span class="wa-popup-time-text" id="waInteractiveTime">Just now</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Popup Quick Reply Form -->
+      <form class="wa-popup-reply-bar" id="waInteractiveReplyForm">
+        <div class="wa-popup-input-container">
+          <input 
+            type="text" 
+            id="waInteractiveInput" 
+            placeholder="Type your reply here..." 
+            autocomplete="off"
+            maxlength="1000"
+            required
+          >
+          <button type="submit" class="wa-popup-send-btn" id="waInteractiveSendBtn" aria-label="Send" title="Send Reply">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="#FFFFFF">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="wa-popup-action-footer">
+          <button type="button" class="wa-popup-open-chat-link" id="waInteractiveOpenChatBtn">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+              <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
+            </svg>
+            Open Full Chat
+          </button>
+          <span class="wa-popup-hint">Instant Support</span>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Fullscreen Lightbox for Media -->
   <div class="media-lightbox" id="mediaLightbox" style="display: none;">
     <button class="lightbox-close-btn" id="closeLightbox">&times;</button>

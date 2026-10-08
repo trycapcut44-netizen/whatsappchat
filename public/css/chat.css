@@ -1228,4 +1228,320 @@ html, body {
   margin-bottom: 3px;
 }
 
+/* ---------------- WHATSAPP INTERACTIVE QUICK-REPLY POPUP MODAL ---------------- */
+.wa-interactive-popup-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(11, 20, 26, 0.68);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: waBackdropFadeIn 0.22s ease-out forwards;
+}
+
+@keyframes waBackdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.wa-interactive-popup {
+  width: 100%;
+  max-width: 420px;
+  background: #efeae2;
+  background-image: radial-gradient(#d5cdc2 1.2px, transparent 1.2px);
+  background-size: 16px 16px;
+  border-radius: 18px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: waPopupSlideIn 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  position: relative;
+}
+
+@keyframes waPopupSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.93);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.wa-popup-header {
+  background: var(--wa-header-green);
+  color: #ffffff;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.wa-popup-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.wa-popup-header-left .wa-popup-avatar-wrap {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+}
+
+.wa-popup-header-left .wa-popup-avatar-wrap img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #ffffff;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+}
+
+.wa-popup-online-dot {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  width: 11px;
+  height: 11px;
+  background: #25d366;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+}
+
+.wa-popup-header-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.wa-popup-title-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.wa-popup-sender-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wa-popup-status-subtitle {
+  font-size: 11.5px;
+  color: #d1f2eb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wa-popup-modal-close {
+  background: rgba(255, 255, 255, 0.16);
+  border: none;
+  color: #ffffff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.wa-popup-modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.wa-popup-body-area {
+  padding: 16px 14px 12px 14px;
+  max-height: 250px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.wa-popup-bubble-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.wa-popup-bubble-box {
+  background: #ffffff;
+  border-radius: 4px 14px 14px 14px;
+  padding: 10px 12px;
+  box-shadow: 0 1px 3px rgba(11, 20, 26, 0.15);
+  max-width: 95%;
+  word-wrap: break-word;
+  position: relative;
+}
+
+.wa-popup-bubble-sender {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--wa-header-green);
+  margin-bottom: 4px;
+}
+
+.wa-popup-msg-content {
+  font-size: 14px;
+  line-height: 1.42;
+  color: #111b21;
+}
+
+.wa-popup-msg-content img {
+  max-width: 100%;
+  max-height: 180px;
+  border-radius: 8px;
+  margin-top: 4px;
+  object-fit: cover;
+  display: block;
+}
+
+.wa-popup-msg-content video {
+  max-width: 100%;
+  max-height: 180px;
+  border-radius: 8px;
+  margin-top: 4px;
+  display: block;
+}
+
+.wa-popup-msg-meta {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.wa-popup-time-text {
+  font-size: 10.5px;
+  color: #667781;
+}
+
+.wa-popup-reply-bar {
+  background: #f0f2f5;
+  border-top: 1px solid #e9edef;
+  padding: 10px 12px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wa-popup-input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#waInteractiveInput {
+  flex: 1;
+  height: 42px;
+  background: #ffffff;
+  border: 1px solid #d1d7db;
+  border-radius: 22px;
+  padding: 0 14px;
+  font-size: 14px;
+  color: #111b21;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#waInteractiveInput:focus {
+  border-color: #00a884;
+  box-shadow: 0 0 0 2px rgba(0, 168, 132, 0.2);
+}
+
+.wa-popup-send-btn {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  max-width: 42px;
+  border-radius: 50%;
+  background: var(--wa-header-green);
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s, background 0.2s;
+}
+
+.wa-popup-send-btn:hover {
+  background: #008069;
+}
+
+.wa-popup-send-btn:active {
+  transform: scale(0.92);
+}
+
+.wa-popup-action-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+.wa-popup-open-chat-link {
+  background: none;
+  border: none;
+  color: #008069;
+  font-size: 12.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.wa-popup-open-chat-link:hover {
+  background: rgba(0, 128, 105, 0.08);
+}
+
+.wa-popup-hint {
+  font-size: 11px;
+  color: #8696a0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Mobile optimizations for Interactive Popup */
+@media (max-width: 480px) {
+  .wa-interactive-popup-backdrop {
+    padding: 10px;
+    align-items: flex-end; /* Mobile bottom sheet style */
+  }
+
+  .wa-interactive-popup {
+    border-radius: 20px 20px 14px 14px;
+    margin-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+
 

@@ -134,6 +134,23 @@
   const waPopupCloseBtn = document.getElementById('waPopupCloseBtn');
   const waIncomingAudio = document.getElementById('waIncomingAudio');
   let popupDismissTimer = null;
+
+  // WhatsApp Interactive Quick-Reply Modal Elements
+  const waInteractivePopupBackdrop = document.getElementById('waInteractivePopupBackdrop');
+  const waInteractivePopup = document.getElementById('waInteractivePopup');
+  const waInteractiveAvatar = document.getElementById('waInteractiveAvatar');
+  const waInteractiveSender = document.getElementById('waInteractiveSender');
+  const waInteractiveSubtitle = document.getElementById('waInteractiveSubtitle');
+  const waInteractiveBubbleSender = document.getElementById('waInteractiveBubbleSender');
+  const waInteractiveMsgContent = document.getElementById('waInteractiveMsgContent');
+  const waInteractiveTime = document.getElementById('waInteractiveTime');
+  const waInteractiveReplyForm = document.getElementById('waInteractiveReplyForm');
+  const waInteractiveInput = document.getElementById('waInteractiveInput');
+  const waInteractiveCloseBtn = document.getElementById('waInteractiveCloseBtn');
+  const waInteractiveOpenChatBtn = document.getElementById('waInteractiveOpenChatBtn');
+  let pendingAdminReply = null;
+  let isInteractivePopupOpen = false;
+  let titleFlashInterval = null;
   
   // Visitor Voice Recording Elements
   const visitorMicBtn = document.getElementById('visitorMicBtn');
@@ -335,11 +352,195 @@
 
         notif.onclick = function () {
           window.focus();
+          if (msg.sender === 'admin' || pendingAdminReply) {
+            showInteractiveReplyPopup(msg);
+          }
           notif.close();
         };
       }
     } catch (e) {}
   }
+
+  // --- Tab Title Notification Alert ---
+  let originalDocumentTitle = document.title || 'WhatsApp Business';
+  function startTabTitleNotification(brand, snippet) {
+    stopTabTitleNotification();
+    originalDocumentTitle = document.title || 'WhatsApp Business';
+    let toggle = false;
+    titleFlashInterval = setInterval(() => {
+      document.title = toggle ? `(1) 💬 Reply from ${brand}` : originalDocumentTitle;
+      toggle = !toggle;
+    }, 1000);
+  }
+
+  function stopTabTitleNotification() {
+    if (titleFlashInterval) {
+      clearInterval(titleFlashInterval);
+      titleFlashInterval = null;
+    }
+    document.title = settings.brandName || 'WhatsApp Business';
+  }
+
+  // --- Interactive WhatsApp Quick-Reply Popup Modal ---
+  function showInteractiveReplyPopup(msg) {
+    if (!waInteractivePopupBackdrop || !msg) return;
+
+    pendingAdminReply = msg;
+    const brandName = settings.brandName || 'WhatsApp Business';
+    const brandAvatar = settings.brandAvatar || '/assets/whatsapp-business.svg';
+
+    if (waInteractiveSender) waInteractiveSender.textContent = brandName;
+    if (waInteractiveBubbleSender) waInteractiveBubbleSender.textContent = brandName;
+    if (waInteractiveAvatar) waInteractiveAvatar.src = brandAvatar;
+    if (waInteractiveTime) waInteractiveTime.textContent = formatTime(msg.timestamp || Date.now());
+
+    // Render message content in popup bubble
+    if (waInteractiveMsgContent) {
+      if (msg.type === 'voice') {
+        const audioId = 'popup_aud_' + Math.random().toString(36).substring(2, 8);
+        const durationFormatted = formatDuration(msg.voiceDuration || 14);
+        waInteractiveMsgContent.innerHTML = `
+          <div class="voice-player" id="${audioId}">
+            <div class="voice-avatar-mic">
+              <img src="${brandAvatar}" alt="Voice">
+              <div class="voice-mic-badge">
+                <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>
+              </div>
+            </div>
+            <div class="voice-controls">
+              <div class="voice-track-row">
+                <button class="voice-play-btn" data-audio-id="${audioId}" data-url="${msg.content}">
+                  <svg class="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+                <div class="waveform-bars" data-audio-id="${audioId}">
+                  ${generateWaveformBarsHtml()}
+                </div>
+              </div>
+              <div class="voice-meta-row">
+                <span class="voice-timer" id="${audioId}_time">0:00 / ${durationFormatted}</span>
+                <button class="speed-pill" data-audio-id="${audioId}">1x</button>
+              </div>
+            </div>
+          </div>
+          ${msg.caption ? `<div class="msg-caption" style="margin-top:6px;">${escapeHtml(msg.caption)}</div>` : ''}
+        `;
+        initVoicePlayerListeners(waInteractiveMsgContent);
+      } else if (msg.type === 'image') {
+        waInteractiveMsgContent.innerHTML = `
+          <div class="msg-media-wrap" onclick="window.viewMedia('${msg.content}', 'image')">
+            <img src="${msg.content}" alt="Image" style="max-height: 180px; width: 100%; object-fit: cover; border-radius: 8px; cursor: pointer;">
+          </div>
+          ${msg.caption ? `<div class="msg-caption" style="margin-top:6px;">${escapeHtml(msg.caption)}</div>` : ''}
+        `;
+      } else if (msg.type === 'video') {
+        waInteractiveMsgContent.innerHTML = `
+          <div class="msg-media-wrap">
+            <video src="${msg.content}" controls playsinline style="max-height: 180px; width: 100%; border-radius: 8px;"></video>
+          </div>
+          ${msg.caption ? `<div class="msg-caption" style="margin-top:6px;">${escapeHtml(msg.caption)}</div>` : ''}
+        `;
+      } else {
+        let formattedText = escapeHtml(msg.content || '');
+        formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        formattedText = formattedText.replace(/\n/g, '<br>');
+        waInteractiveMsgContent.innerHTML = `<div class="msg-text">${formattedText}</div>`;
+      }
+    }
+
+    waInteractivePopupBackdrop.style.display = 'flex';
+    isInteractivePopupOpen = true;
+
+    // Flash tab title if user is in background
+    if (document.hidden) {
+      startTabTitleNotification(brandName, msg.content || 'New reply');
+    }
+
+    setTimeout(() => {
+      if (waInteractiveInput) {
+        waInteractiveInput.focus();
+      }
+    }, 200);
+  }
+
+  function hideInteractiveReplyPopup() {
+    if (!waInteractivePopupBackdrop) return;
+    waInteractivePopupBackdrop.style.display = 'none';
+    isInteractivePopupOpen = false;
+    stopTabTitleNotification();
+  }
+
+  if (waInteractiveCloseBtn) {
+    waInteractiveCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hideInteractiveReplyPopup();
+    });
+  }
+
+  if (waInteractiveOpenChatBtn) {
+    waInteractiveOpenChatBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      pendingAdminReply = null;
+      hideInteractiveReplyPopup();
+      scrollToBottom();
+      if (messageInput) messageInput.focus();
+    });
+  }
+
+  if (waInteractivePopupBackdrop) {
+    waInteractivePopupBackdrop.addEventListener('click', (e) => {
+      if (e.target === waInteractivePopupBackdrop) {
+        hideInteractiveReplyPopup();
+      }
+    });
+  }
+
+  if (waInteractiveReplyForm) {
+    waInteractiveReplyForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const replyText = waInteractiveInput ? waInteractiveInput.value.trim() : '';
+      if (!replyText) return;
+
+      sendVisitorMessage(replyText);
+      if (waInteractiveInput) waInteractiveInput.value = '';
+      pendingAdminReply = null;
+      hideInteractiveReplyPopup();
+      scrollToBottom();
+      if (messageInput) messageInput.focus();
+    });
+  }
+
+  // Handle mobile Back navigation & Tab visibility
+  function setupHistoryAndVisibilityWatchers() {
+    try {
+      if (!window.history.state || !window.history.state.waChat) {
+        window.history.replaceState({ waChat: true }, '', window.location.href);
+      }
+    } catch (e) {}
+
+    window.addEventListener('popstate', (e) => {
+      // If user hit device Back button, preserve chat session & show reply if pending
+      if (pendingAdminReply) {
+        showInteractiveReplyPopup(pendingAdminReply);
+      }
+      try {
+        window.history.pushState({ waChat: true }, '', window.location.href);
+      } catch (err) {}
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        stopTabTitleNotification();
+        if (pendingAdminReply && !isInteractivePopupOpen) {
+          showInteractiveReplyPopup(pendingAdminReply);
+        }
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      stopTabTitleNotification();
+    });
+  }
+  setupHistoryAndVisibilityWatchers();
 
   // --- Immediate Instant Load of Cached Old Chat (Zero delay flicker-free) ---
   const initialOldMessages = getCachedMessages();
@@ -401,8 +602,17 @@
       if (msg.sender === 'bot' || msg.sender === 'admin') {
         playIncomingChime();
         triggerHaptic();
-        showWhatsAppPopupNotification(msg);
         showSystemBrowserNotification(msg);
+
+        if (msg.sender === 'admin') {
+          // When Admin replies, ALWAYS open the interactive quick-reply modal
+          showInteractiveReplyPopup(msg);
+        } else if (document.hidden) {
+          // If visitor navigated away/switched tabs and bot replies
+          showInteractiveReplyPopup(msg);
+        } else {
+          showWhatsAppPopupNotification(msg);
+        }
       }
     });
 
