@@ -14,6 +14,24 @@
   }
   if (!tenantId) tenantId = 'default';
 
+  // Subdomain Client Protection: Subdomains can NEVER create or manage other subdomains
+  const isMasterTenant = (tenantId === 'default');
+  function stripSubdomainManagementIfClient() {
+    if (!isMasterTenant) {
+      const navBtn = document.getElementById('navTabTenants');
+      if (navBtn) navBtn.remove();
+      const pane = document.getElementById('tab-tenants');
+      if (pane) pane.remove();
+      const modal = document.getElementById('createTenantModal');
+      if (modal) modal.remove();
+      delete window.openCreateTenantModal;
+      delete window.saveCreateTenant;
+      delete window.loadTenantsList;
+    }
+  }
+  stripSubdomainManagementIfClient();
+  window.addEventListener('DOMContentLoaded', stripSubdomainManagementIfClient);
+
   const adminToken = localStorage.getItem('wa_admin_token') || '';
 
   let socket = null;
@@ -2003,7 +2021,6 @@
       const topbarUserPill = document.getElementById('topbarUserPill');
       const topbarTenantPill = document.getElementById('topbarTenantPill');
       const topbarVisitorLink = document.getElementById('topbarVisitorLink');
-      const navTabTenants = document.getElementById('navTabTenants');
 
       if (topbarUserPill) topbarUserPill.textContent = '👤 ' + (data.username || 'admin');
       if (topbarTenantPill) {
@@ -2014,10 +2031,19 @@
       }
 
       // Hide or show subdomains management tab: only visible on master tenant
-      if (navTabTenants) {
-        if (data.tenantId && data.tenantId !== 'default') {
-          navTabTenants.style.display = 'none';
-        } else {
+      const navTabTenants = document.getElementById('navTabTenants');
+      const tabTenantsPane = document.getElementById('tab-tenants');
+      const createTenantModalEl = document.getElementById('createTenantModal');
+
+      if (data.tenantId && data.tenantId !== 'default') {
+        if (navTabTenants) navTabTenants.remove();
+        if (tabTenantsPane) tabTenantsPane.remove();
+        if (createTenantModalEl) createTenantModalEl.remove();
+        delete window.openCreateTenantModal;
+        delete window.saveCreateTenant;
+        delete window.loadTenantsList;
+      } else {
+        if (navTabTenants) {
           navTabTenants.style.display = 'inline-flex';
           loadTenantsList();
         }

@@ -300,12 +300,18 @@ app.post('/api/auth/change-credentials', requireAdminAuth, (req, res) => {
   res.json(result);
 });
 
-// Superadmin Subdomains & Tenants API
+// Superadmin Subdomains & Tenants API (Master Admin Only)
 app.get('/api/tenants', requireAdminAuth, (req, res) => {
+  if (req.tenantId && req.tenantId !== 'default') {
+    return res.status(403).json({ error: 'Access denied: Only master admin can view subdomains.' });
+  }
   res.json(storage.getTenantsList());
 });
 
 app.post('/api/tenants', requireAdminAuth, (req, res) => {
+  if (req.tenantId && req.tenantId !== 'default') {
+    return res.status(403).json({ error: 'Access denied: Only master admin can create subdomains.' });
+  }
   try {
     const { id, name, username, password, adminUsername, adminPassword } = req.body;
     const finalUser = username || adminUsername || 'admin';
@@ -323,6 +329,9 @@ app.post('/api/tenants', requireAdminAuth, (req, res) => {
 });
 
 app.delete('/api/tenants/:id', requireAdminAuth, (req, res) => {
+  if (req.tenantId && req.tenantId !== 'default') {
+    return res.status(403).json({ error: 'Access denied: Only master admin can delete subdomains.' });
+  }
   try {
     storage.deleteTenant(req.params.id);
     res.json({ success: true });
