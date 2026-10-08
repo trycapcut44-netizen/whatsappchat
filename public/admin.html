@@ -179,6 +179,17 @@
               </div>
             </div>
 
+            <!-- Quick Replies Bar in Admin Live Chat -->
+            <div class="admin-quick-replies-toolbar" id="adminQuickRepliesToolbar" style="display: none;">
+              <div class="admin-qr-toolbar-header">
+                <span class="qr-toolbar-label">⚡ Quick Replies:</span>
+                <span class="qr-toolbar-hint">Tap any button to send to client</span>
+              </div>
+              <div class="admin-qr-chips-wrapper" id="adminQrChipsWrapper">
+                <!-- Dynamically populated quick reply chips -->
+              </div>
+            </div>
+
             <!-- Chat Input Footer -->
             <div class="chat-pane-footer" id="chatPaneFooter" style="display: none;">
               <button class="btn-chat-tool" id="adminAttachBtn" title="Send Photo / Video">
@@ -188,6 +199,10 @@
 
               <button class="btn-chat-tool mic-btn" id="adminMicBtn" title="Record In-Browser Voice Note">
                 🎤
+              </button>
+
+              <button class="btn-chat-tool" id="adminPasteBtn" type="button" title="Paste text from clipboard">
+                📋
               </button>
 
               <textarea id="adminMessageInput" placeholder="Type a manual reply as Agent..." rows="1"></textarea>
@@ -207,12 +222,24 @@
             </div>
             <div class="details-card">
               <div class="detail-field">
-                <label>Visitor ID:</label>
-                <span id="detailVisitorId">-</span>
+                <label>Visitor DP / Avatar:</label>
+                <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px;">
+                  <img src="/assets/default-avatar.svg" id="detailVisitorAvatar" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1.5px solid #d1d7db;">
+                  <button type="button" class="btn-secondary" id="detailUploadAvatarBtn" style="padding: 4px 10px; font-size: 12px;">📁 Change DP</button>
+                  <input type="file" id="detailAvatarFileInput" accept="image/*" style="display: none;">
+                </div>
               </div>
               <div class="detail-field">
-                <label>Name:</label>
-                <input type="text" id="detailVisitorNameInput" placeholder="Add name...">
+                <label>Visitor / Profile Name:</label>
+                <input type="text" id="detailVisitorNameInput" placeholder="e.g. @tiktok_username or Name">
+              </div>
+              <div class="detail-field">
+                <label>Platform & Source:</label>
+                <span id="detailVisitorPlatform" class="source-tag">-</span>
+              </div>
+              <div class="detail-field">
+                <label>Visitor ID:</label>
+                <span id="detailVisitorId">-</span>
               </div>
               <div class="detail-field">
                 <label>Phone / WhatsApp:</label>
@@ -277,7 +304,7 @@
           <div class="page-header">
             <div>
               <h2>Quick Reply Button Chips</h2>
-              <p class="subtext">Buttons displayed at the bottom of the visitor chat to eliminate friction and prompt immediate engagement.</p>
+              <p class="subtext">Configure interactive buttons with Voice Notes (Record Live or Upload Audio), Product Photos, Video Demos, or Funnel Flows.</p>
             </div>
             <button class="btn-primary" id="addQuickReplyBtn">+ Add Quick Reply</button>
           </div>
@@ -286,10 +313,12 @@
             <table class="admin-table">
               <thead>
                 <tr>
-                  <th>Order</th>
-                  <th>Button Label</th>
-                  <th>Target Funnel Flow</th>
-                  <th>Actions</th>
+                  <th style="width: 55px;">Order</th>
+                  <th>Button Chip Label</th>
+                  <th>Action / Type</th>
+                  <th>Attached Media / Content</th>
+                  <th style="width: 75px;">Delay</th>
+                  <th style="width: 140px; text-align: right;">Actions</th>
                 </tr>
               </thead>
               <tbody id="quickRepliesTableBody">
@@ -432,6 +461,203 @@
       <div class="modal-footer">
         <button type="button" class="btn-secondary" id="cancelFlowModal">Cancel</button>
         <button type="button" class="btn-primary" id="saveFlowModalBtn">Save Funnel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= QUICK REPLY MODAL ================= -->
+  <div class="modal-overlay" id="quickReplyModal" style="display: none;">
+    <div class="modal-container qr-modal-container">
+      <div class="modal-header">
+        <h3 id="quickReplyModalTitle">Edit Quick Reply</h3>
+        <button class="modal-close-btn" id="closeQuickReplyModal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="modalQrId">
+
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label>Button Chip Label (Shown to visitor & admin)</label>
+            <input type="text" id="modalQrLabel" placeholder="e.g. 🎤 Voice Note Details" required>
+          </div>
+          <div class="form-group flex-1">
+            <label>Action / Reply Type</label>
+            <select id="modalQrActionType">
+              <option value="voice">🎤 Voice Note (Record or Upload Audio)</option>
+              <option value="image">📸 Product Photo / Picture</option>
+              <option value="video">🎥 Video Demo</option>
+              <option value="flow">⚡ Trigger Funnel Flow</option>
+              <option value="text">💬 Direct Text Message</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Section: Voice Note (Record or Upload) -->
+        <div class="qr-type-section" id="qrVoiceSection">
+          <label style="font-weight: 600; font-size: 13px; margin-bottom: 6px; display: block;">Voice Note Setup (Record Live or Upload Audio)</label>
+          <div class="qr-media-box">
+            <div class="qr-audio-action-row" style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <!-- Live Record Button -->
+              <button type="button" class="btn-action-mic" id="qrRecordVoiceBtn">
+                🔴 Record Voice Note
+              </button>
+
+              <!-- Upload Audio Button -->
+              <button type="button" class="btn-secondary" id="qrUploadVoiceBtn">
+                📁 Upload Voice File (MP3/WAV)
+              </button>
+              <input type="file" id="qrAudioFileInput" accept="audio/*,.mp3,.wav,.ogg,.m4a,.webm,.aac" style="display: none;">
+            </div>
+
+            <!-- In-Modal Voice Recording Bar (Active during recording) -->
+            <div class="qr-voice-recording-bar" id="qrVoiceRecordingBar" style="display: none; margin-top: 10px;">
+              <div class="record-pulse-dot"></div>
+              <span class="record-timer" id="qrRecordTimer">00:00</span>
+              <span class="record-label">Recording microphone...</span>
+              <div class="record-actions">
+                <button type="button" class="btn-record-cancel" id="qrCancelRecordBtn">✕ Cancel</button>
+                <button type="button" class="btn-record-send" id="qrStopRecordBtn">✔ Stop & Save</button>
+              </div>
+            </div>
+
+            <!-- Audio Preview Player -->
+            <div class="qr-audio-preview" id="qrAudioPreviewWrap" style="display: none; margin-top: 12px; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #d1d7db;">
+              <audio id="qrAudioPreviewPlayer" controls style="width: 100%; height: 38px;"></audio>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                <span style="font-size: 12px; color: #54656f;" id="qrAudioDurationLabel">Duration: 0s</span>
+                <button type="button" class="btn-text-danger" id="qrRemoveAudioBtn">✕ Remove Audio</button>
+              </div>
+            </div>
+
+            <input type="hidden" id="modalQrAudioUrl">
+            <input type="hidden" id="modalQrAudioDuration" value="0">
+          </div>
+        </div>
+
+        <!-- Section: Photo / Picture Upload -->
+        <div class="qr-type-section" id="qrImageSection" style="display: none;">
+          <label style="font-weight: 600; font-size: 13px; margin-bottom: 6px; display: block;">Product Photo / Picture</label>
+          <div class="qr-media-box">
+            <div class="qr-upload-btn-row">
+              <button type="button" class="btn-secondary" id="qrUploadImageBtn">
+                📁 Upload Picture / Photo
+              </button>
+              <input type="file" id="qrImageFileInput" accept="image/*,.jpg,.jpeg,.png,.webp,.gif" style="display: none;">
+            </div>
+
+            <!-- Image Preview -->
+            <div class="qr-image-preview-wrap" id="qrImagePreviewWrap" style="display: none; margin-top: 10px;">
+              <img id="qrImagePreview" src="" alt="Preview" style="max-height: 140px; border-radius: 8px; border: 1px solid #d1d7db; object-fit: contain;">
+              <div style="margin-top: 6px;">
+                <button type="button" class="btn-text-danger" id="qrRemoveImageBtn">✕ Remove Picture</button>
+              </div>
+            </div>
+            <input type="hidden" id="modalQrImageUrl">
+
+            <div class="form-group" style="margin-top: 12px;">
+              <label>Photo Caption (Optional)</label>
+              <input type="text" id="modalQrImageCaption" placeholder="e.g. 100% Original imported product photo ✨">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Video Demo Upload -->
+        <div class="qr-type-section" id="qrVideoSection" style="display: none;">
+          <label style="font-weight: 600; font-size: 13px; margin-bottom: 6px; display: block;">Video Demo</label>
+          <div class="qr-media-box">
+            <div class="qr-upload-btn-row">
+              <button type="button" class="btn-secondary" id="qrUploadVideoBtn">
+                📁 Upload Video File
+              </button>
+              <input type="file" id="qrVideoFileInput" accept="video/*,.mp4,.webm,.mov" style="display: none;">
+            </div>
+
+            <!-- Video Preview -->
+            <div class="qr-video-preview-wrap" id="qrVideoPreviewWrap" style="display: none; margin-top: 10px;">
+              <video id="qrVideoPreview" src="" controls style="max-height: 160px; border-radius: 8px; border: 1px solid #d1d7db;"></video>
+              <div style="margin-top: 6px;">
+                <button type="button" class="btn-text-danger" id="qrRemoveVideoBtn">✕ Remove Video</button>
+              </div>
+            </div>
+            <input type="hidden" id="modalQrVideoUrl">
+
+            <div class="form-group" style="margin-top: 12px;">
+              <label>Video Caption (Optional)</label>
+              <input type="text" id="modalQrVideoCaption" placeholder="e.g. Watch 30-sec demo video before ordering 🎥">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Funnel Flow -->
+        <div class="qr-type-section" id="qrFlowSection" style="display: none;">
+          <div class="form-group">
+            <label>Select Target Funnel Sequence</label>
+            <select id="modalQrFlowSelect">
+              <!-- Dynamically populated flows -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Section: Direct Text Message -->
+        <div class="qr-type-section" id="qrTextSection" style="display: none;">
+          <div class="form-group">
+            <label>Direct Message Text</label>
+            <textarea id="modalQrTextContent" rows="3" placeholder="Enter message text..."></textarea>
+          </div>
+        </div>
+
+        <!-- Delay Timer & Order -->
+        <div class="form-row" style="margin-top: 14px;">
+          <div class="form-group flex-1">
+            <label>Delay (Seconds before simulated response)</label>
+            <input type="number" id="modalQrDelay" min="1" max="60" value="2">
+          </div>
+          <div class="form-group flex-1">
+            <label>Display Order</label>
+            <input type="number" id="modalQrOrder" min="1" max="99" value="1">
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="cancelQuickReplyModal">Cancel</button>
+        <button type="button" class="btn-primary" id="saveQuickReplyModalBtn">Save Quick Reply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= FORWARD MESSAGE MODAL ================= -->
+  <div class="modal-overlay" id="forwardModal" style="display: none;">
+    <div class="modal-container forward-modal-container">
+      <div class="modal-header">
+        <h3>↪️ Forward Message</h3>
+        <button class="modal-close-btn" id="closeForwardModal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="forwardMsgId">
+        
+        <!-- Preview of the message being forwarded -->
+        <div class="forward-preview-box">
+          <span style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #54656f;">Message to Forward:</span>
+          <div id="forwardMsgPreviewContent" style="margin-top: 6px; font-size: 13.5px; color: #111b21;"></div>
+        </div>
+
+        <!-- Search Visitors -->
+        <div class="form-group" style="margin-top: 14px;">
+          <label>Forward to Conversation / Lead:</label>
+          <input type="text" id="forwardVisitorSearchInput" placeholder="Search by name, handle, or phone...">
+        </div>
+
+        <div class="forward-visitors-list" id="forwardVisitorsList" style="max-height: 250px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <!-- Dynamically populated visitor contacts -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="cancelForwardModal">Cancel</button>
       </div>
     </div>
   </div>

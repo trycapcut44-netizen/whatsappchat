@@ -1324,3 +1324,324 @@ input:checked + .slider:before {
   }
 }
 
+/* ================= QUICK REPLIES ENHANCEMENTS ================= */
+
+/* Admin Live Chat Quick Replies Toolbar */
+.admin-quick-replies-toolbar {
+  background: #f0f2f5;
+  border-top: 1px solid var(--border-color);
+  padding: 6px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-qr-toolbar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.qr-toolbar-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #54656f;
+}
+
+.qr-toolbar-hint {
+  font-size: 10.5px;
+  color: #8696a0;
+}
+
+.admin-qr-chips-wrapper {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0 2px;
+  scrollbar-width: thin;
+}
+
+.admin-qr-chips-wrapper::-webkit-scrollbar {
+  height: 4px;
+}
+.admin-qr-chips-wrapper::-webkit-scrollbar-thumb {
+  background: #ccd0d5;
+  border-radius: 4px;
+}
+
+.admin-qr-chip-btn {
+  background: #ffffff;
+  border: 1px solid #d1d7db;
+  border-radius: 16px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #111b21;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.04);
+}
+
+.admin-qr-chip-btn:hover {
+  background: #e7f7ed;
+  border-color: #00a884;
+  color: #008f72;
+  transform: translateY(-1px);
+}
+
+.admin-qr-chip-btn:active {
+  transform: translateY(0);
+}
+
+/* Quick Replies Table Badges & Cell Previews */
+.qr-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.qr-badge-voice { background: #e7f7ed; color: #0b8043; }
+.qr-badge-image { background: #e8f0fe; color: #1a73e8; }
+.qr-badge-video { background: #fce8e6; color: #d93025; }
+.qr-badge-flow { background: #fef7e0; color: #b06000; }
+.qr-badge-text { background: #f1f3f4; color: #5f6368; }
+
+.qr-media-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qr-mini-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid #d1d7db;
+}
+
+.qr-mini-audio-btn {
+  background: #00a884;
+  color: #fff;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+/* Quick Reply Modal Layout */
+.qr-modal-container {
+  max-width: 650px;
+  width: 90%;
+}
+
+.qr-media-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+  margin-top: 6px;
+}
+
+.btn-action-mic {
+  background: #ea4335;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+
+.btn-action-mic:hover {
+  background: #d33426;
+}
+
+.qr-voice-recording-bar {
+  background: #ffebe9;
+  border: 1px solid #f5c2c7;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-text-danger {
+  background: transparent;
+  border: none;
+  color: #d93025;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px;
+}
+.btn-text-danger:hover {
+  text-decoration: underline;
+}
+
+/* ================= MESSAGE ACTIONS & FORWARD MODAL ================= */
+.msg-row {
+  position: relative;
+}
+
+.msg-row:hover .msg-bubble-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.msg-bubble-actions {
+  position: absolute;
+  top: -10px;
+  right: 12px;
+  display: flex;
+  gap: 4px;
+  background: #ffffff;
+  padding: 2px 6px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  border: 1px solid #d1d7db;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 10;
+}
+
+.msg-row.incoming .msg-bubble-actions {
+  left: 12px;
+  right: auto;
+}
+
+.msg-action-btn {
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 3px 5px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.msg-action-btn:hover {
+  background: #f0f2f5;
+}
+
+.msg-forwarded-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #667781;
+  font-style: italic;
+  margin-bottom: 4px;
+}
+
+/* Forward Modal */
+.forward-modal-container {
+  max-width: 480px;
+  width: 90%;
+}
+
+.forward-preview-box {
+  background: #f0f2f5;
+  border-left: 3px solid #00a884;
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
+.forward-visitor-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f2f5;
+  transition: background 0.15s;
+}
+
+.forward-visitor-item:hover {
+  background: #f8fafc;
+}
+
+.forward-visitor-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.forward-visitor-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.btn-forward-send {
+  background: #00a884;
+  color: #fff;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.btn-forward-send:hover {
+  background: #008f72;
+}
+
+/* Platform Badges */
+.badge-tiktok {
+  background: #111;
+  color: #25F4EE;
+  font-weight: 700;
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid #FE2C55;
+}
+
+.badge-facebook {
+  background: #1877f2;
+  color: #fff;
+  font-weight: 700;
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+

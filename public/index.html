@@ -95,6 +95,22 @@
       </div>
     </header>
 
+    <!-- WhatsApp Floating In-App Popup Notification Banner -->
+    <div class="wa-popup-notification" id="waPopupNotification" style="display: none;">
+      <div class="wa-popup-avatar-wrap">
+        <img src="/assets/whatsapp-business.svg" id="waPopupAvatar" alt="Avatar">
+        <span class="wa-popup-dot"></span>
+      </div>
+      <div class="wa-popup-content">
+        <div class="wa-popup-header-row">
+          <strong id="waPopupSender">WhatsApp Business</strong>
+          <span class="wa-popup-time">now</span>
+        </div>
+        <div class="wa-popup-body" id="waPopupMessage">New message received</div>
+      </div>
+      <button type="button" class="wa-popup-close" id="waPopupCloseBtn" aria-label="Close">&times;</button>
+    </div>
+
     <!-- Encryption Notice Banner -->
     <div class="encryption-notice">
       <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
@@ -176,6 +192,10 @@
             <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5V6H9v9.5a3 3 0 0 0 6 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
           </svg>
         </button>
+
+        <button class="btn-icon" id="visitorPasteBtn" type="button" aria-label="Paste" title="Paste from Clipboard" style="font-size: 16px;">
+          📋
+        </button>
         <input type="file" id="fileInput" accept="image/*,video/*" style="display: none;">
       </div>
 
@@ -209,6 +229,11 @@
     <button class="lightbox-close-btn" id="closeLightbox">&times;</button>
     <div class="lightbox-body" id="lightboxBody"></div>
   </div>
+
+  <!-- WhatsApp Incoming Notification Tone -->
+  <audio id="waIncomingAudio" preload="auto">
+    <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcHCqS2/P/hFcxJm276v+5k2s9Nm214/O0k2tBPGSp2eqthF09MGeq1+Gne2Y2LV2PvenHjG4+K1F/sN3pnW5CKkt1p9XonXNKLkNpn8/smXpQLjxllcLrnnpRMDRflLzpnHhRMDFbkbvsm3ZSMDVYj7vslnhTMjJWi7rsmnhTMjJWi7vrm3hSMDFXjLvsm3ZSMDVYkLrpnXlRMDFblLzpm3hSMDRflLzrmnlRMDRflbvpm3hRMDVekrvrm3lRMDVekbrqnHpRMDRckbvqnHpRMDRckbvqnHpRMDRckbvqnHpRMDRckbvqnHpRMDRckbvqnHpRMDRckbvqnHpRMDRckbvqnHpRMDRckbvq" type="audio/wav">
+  </audio>
 
   <script src="/js/chat.js"></script>
 </body>

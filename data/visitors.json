@@ -10,40 +10,5 @@
     "source": "Direct Traffic",
     "lastActive": "2026-10-07T20:51:22.663Z",
     "lastMessage": "hello"
-  },
-  "test_vis_1791404630557": {
-    "id": "test_vis_1791404630557",
-    "name": "Test Customer",
-    "phone": "",
-    "createdAt": "2026-10-07T20:23:50.559Z",
-    "isOnline": true,
-    "botPaused": false,
-    "unreadCount": 0,
-    "source": "TikTok Ads Campaign",
-    "lastActive": "2026-10-07T20:23:50.559Z"
-  },
-  "test_vis_1791404711170": {
-    "id": "test_vis_1791404711170",
-    "name": "Test Customer",
-    "phone": "+1 (555) 234-5678",
-    "createdAt": "2026-10-07T20:25:11.240Z",
-    "isOnline": false,
-    "botPaused": false,
-    "unreadCount": 1,
-    "source": "TikTok Ads Campaign",
-    "lastActive": "2026-10-07T20:25:24.205Z",
-    "lastMessage": "Delivery is typically within 24 to 48 hours with door-to-door tracking. Would you like to reserve yours with today's free delivery guarantee? Drop your delivery city or phone number below! 👇"
-  },
-  "test_vis_1791404791588": {
-    "id": "test_vis_1791404791588",
-    "name": "Test Customer",
-    "phone": "+1 (555) 234-5678",
-    "createdAt": "2026-10-07T20:26:31.645Z",
-    "isOnline": false,
-    "botPaused": false,
-    "unreadCount": 1,
-    "source": "TikTok Ads Campaign",
-    "lastActive": "2026-10-07T20:26:44.639Z",
-    "lastMessage": "Delivery is typically within 24 to 48 hours with door-to-door tracking. Would you like to reserve yours with today's free delivery guarantee? Drop your delivery city or phone number below! 👇"
   }
 }

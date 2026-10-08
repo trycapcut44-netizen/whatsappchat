@@ -39,26 +39,48 @@ const defaultQuickReplies = [
   {
     id: "qr_cod",
     label: "📦 Cash on Delivery Available?",
+    actionType: "flow",
     flowId: "flow_cod",
     order: 1
   },
   {
     id: "qr_price",
     label: "🔥 Special Discount & Price",
+    actionType: "flow",
     flowId: "flow_pricing",
     order: 2
   },
   {
+    id: "qr_voice",
+    label: "🎤 Audio Voice Note",
+    actionType: "voice",
+    content: "/uploads/sample-greeting.wav",
+    voiceDuration: 3,
+    delay: 2,
+    order: 3
+  },
+  {
+    id: "qr_pic",
+    label: "📸 Real Product Photos",
+    actionType: "image",
+    content: "/uploads/file-1791404933496-954088728.jpeg",
+    caption: "100% Original imported product photo ✨",
+    delay: 2,
+    order: 4
+  },
+  {
     id: "qr_order",
     label: "⚡ Order Now (Fast Delivery)",
+    actionType: "flow",
     flowId: "flow_order",
-    order: 3
+    order: 5
   },
   {
     id: "qr_agent",
     label: "👤 Speak with Live Agent",
+    actionType: "flow",
     flowId: "flow_agent",
-    order: 4
+    order: 6
   }
 ];
 
@@ -230,7 +252,13 @@ class Storage {
   init() {
     this.settings = readJSON(SETTINGS_FILE, defaultSettings);
     this.flows = readJSON(FLOWS_FILE, defaultFlows);
-    this.quickReplies = readJSON(QUICK_REPLIES_FILE, defaultQuickReplies);
+    const existingQr = readJSON(QUICK_REPLIES_FILE, defaultQuickReplies);
+    if (!existingQr || !Array.isArray(existingQr) || existingQr.length === 0) {
+      this.quickReplies = [...defaultQuickReplies];
+      writeJSON(QUICK_REPLIES_FILE, this.quickReplies);
+    } else {
+      this.quickReplies = existingQr;
+    }
     this.visitors = readJSON(VISITORS_FILE, {});
     this.messages = readJSON(MESSAGES_FILE, []);
   }
@@ -272,16 +300,40 @@ class Storage {
     return true;
   }
 
-  // Find matching flow by keyword
+  // Find matching flow or media action by keyword / quick reply
   findFlowByKeyword(text) {
     if (!text) return null;
     const clean = text.trim().toLowerCase();
     
-    // Check quick replies matching label
-    const qrMatch = this.quickReplies.find(qr => qr.label.toLowerCase() === clean);
-    if (qrMatch && qrMatch.flowId) {
-      const flow = this.getFlowById(qrMatch.flowId);
-      if (flow && flow.enabled) return flow;
+    // Check quick replies matching label or id
+    const qrMatch = this.quickReplies.find(qr => 
+      (qr.label && qr.label.toLowerCase() === clean) ||
+      (qr.id && qr.id.toLowerCase() === clean)
+    );
+    if (qrMatch) {
+      const actionType = qrMatch.actionType || (qrMatch.flowId ? 'flow' : (qrMatch.type || 'text'));
+      if (actionType === 'flow' && qrMatch.flowId) {
+        const flow = this.getFlowById(qrMatch.flowId);
+        if (flow && flow.enabled) return flow;
+      } else if (['voice', 'image', 'video', 'text'].includes(actionType)) {
+        // Synthesize dynamic single-step flow so typing indicator, audio status, and delay work seamlessly
+        return {
+          id: 'qr_flow_' + qrMatch.id,
+          name: qrMatch.label,
+          triggerType: 'quick_reply',
+          enabled: true,
+          steps: [
+            {
+              id: 'step_qr_' + qrMatch.id,
+              delay: Math.max(1, parseInt(qrMatch.delay) || 2),
+              type: actionType,
+              content: qrMatch.content || '',
+              caption: qrMatch.caption || '',
+              voiceDuration: qrMatch.voiceDuration || (actionType === 'voice' ? 12 : 0)
+            }
+          ]
+        };
+      }
     }
 
     // Check keyword matching across enabled flows
@@ -300,6 +352,10 @@ class Storage {
   // --- Quick Replies ---
   getQuickReplies() {
     return [...this.quickReplies].sort((a, b) => (a.order || 0) - (b.order || 0));
+  }
+
+  getQuickReplyById(id) {
+    return this.quickReplies.find(qr => qr.id === id) || null;
   }
 
   saveQuickReplies(replies) {
@@ -332,6 +388,19 @@ class Storage {
     if (this.visitors[visitorId]) {
       this.visitors[visitorId].phone = phone;
       this.visitors[visitorId].lastActive = new Date().toISOString();
+      writeJSON(VISITORS_FILE, this.visitors);
+      return this.visitors[visitorId];
+    }
+    return null;
+  }
+
+  updateVisitorProfile(visitorId, profileData) {
+    if (this.visitors[visitorId]) {
+      this.visitors[visitorId] = {
+        ...this.visitors[visitorId],
+        ...profileData,
+        lastActive: new Date().toISOString()
+      };
       writeJSON(VISITORS_FILE, this.visitors);
       return this.visitors[visitorId];
     }
@@ -379,6 +448,7 @@ class Storage {
       content: msg.content || '',
       caption: msg.caption || '',
       voiceDuration: msg.voiceDuration || 0,
+      isForwarded: !!msg.isForwarded,
       timestamp: msg.timestamp || new Date().toISOString(),
       status: msg.status || 'delivered' // 'sent', 'delivered', 'read'
     };

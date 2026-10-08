@@ -261,6 +261,17 @@ app.post('/api/visitors/:id/toggle-bot', (req, res) => {
   res.json({ success: true, visitor });
 });
 
+// Update Visitor Profile (Name, Phone, Avatar)
+app.post('/api/visitors/:id/profile', (req, res) => {
+  const { name, phone, avatar } = req.body;
+  const visitor = storage.updateVisitorProfile(req.params.id, { name, phone, avatar });
+  if (visitor) {
+    io.to('admin_room').emit('visitor:updated', visitor);
+    return res.json({ success: true, visitor });
+  }
+  res.status(404).json({ error: 'Visitor not found' });
+});
+
 // File Upload endpoint (Images, Videos, Voice notes, Avatars)
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) {
@@ -292,9 +303,28 @@ app.get('/api/export-leads', (req, res) => {
 io.on('connection', (socket) => {
 
   // --- VISITOR HANDLERS ---
-  socket.on('visitor:join', ({ visitorId, name, source, referrer }) => {
+  socket.on('visitor:join', ({ visitorId, name, avatar, platform, source, referrer }) => {
     socket.visitorId = visitorId;
     socket.join(`visitor_${visitorId}`);
+
+    let detectedPlatform = platform || 'web';
+    const sLower = (source || '').toLowerCase();
+    const rLower = (referrer || '').toLowerCase();
+
+    if (sLower.includes('tiktok') || rLower.includes('tiktok') || sLower.includes('musical_ly')) {
+      detectedPlatform = 'tiktok';
+    } else if (sLower.includes('facebook') || sLower.includes('fb') || sLower.includes('instagram') || rLower.includes('facebook') || rLower.includes('instagram')) {
+      detectedPlatform = 'facebook';
+    }
+
+    let defaultAvatar = '/assets/default-avatar.svg';
+    if (detectedPlatform === 'tiktok') defaultAvatar = '/assets/tiktok-avatar.svg';
+    else if (detectedPlatform === 'facebook') defaultAvatar = '/assets/facebook-avatar.svg';
+
+    const shortId = visitorId ? visitorId.slice(-4) : Math.floor(1000 + Math.random() * 9000);
+    let defaultName = `Visitor #${shortId}`;
+    if (detectedPlatform === 'tiktok') defaultName = `TikTok User #${shortId}`;
+    else if (detectedPlatform === 'facebook') defaultName = `Facebook User #${shortId}`;
 
     let visitor = storage.getVisitor(visitorId);
     let isNewVisitor = false;
@@ -303,17 +333,22 @@ io.on('connection', (socket) => {
       isNewVisitor = true;
       visitor = storage.saveVisitor({
         id: visitorId,
-        name: name || `Visitor #${Math.floor(1000 + Math.random() * 9000)}`,
+        name: name || defaultName,
+        avatar: avatar || defaultAvatar,
+        platform: detectedPlatform,
         phone: '',
         createdAt: new Date().toISOString(),
         isOnline: true,
         botPaused: false,
         unreadCount: 0,
-        source: source || (referrer ? new URL(referrer).hostname : 'Direct / Ads')
+        source: source || (referrer ? new URL(referrer).hostname : (detectedPlatform === 'tiktok' ? 'TikTok Ads' : (detectedPlatform === 'facebook' ? 'Facebook Ads' : 'Direct Traffic')))
       });
     } else {
       visitor = storage.saveVisitor({
         ...visitor,
+        name: (name && name !== defaultName) ? name : (visitor.name || defaultName),
+        avatar: (avatar && avatar !== defaultAvatar) ? avatar : (visitor.avatar || defaultAvatar),
+        platform: visitor.platform || detectedPlatform,
         isOnline: true
       });
     }
@@ -531,6 +566,63 @@ io.on('connection', (socket) => {
       io.to('admin_room').emit('visitor:updated', visitor);
       triggerFlow(visitorId, flow);
     }
+  });
+
+  socket.on('admin:trigger_quick_reply', ({ visitorId, qrId }) => {
+    if (!visitorId || !qrId) return;
+    const qr = storage.getQuickReplyById(qrId);
+    if (!qr) return;
+
+    const actionType = qr.actionType || (qr.flowId ? 'flow' : (qr.type || 'text'));
+    if (actionType === 'flow' && qr.flowId) {
+      const flow = storage.getFlowById(qr.flowId);
+      if (flow) {
+        storage.setBotPaused(visitorId, false);
+        const visitor = storage.getVisitor(visitorId);
+        io.to('admin_room').emit('visitor:updated', visitor);
+        triggerFlow(visitorId, flow);
+      }
+    } else {
+      // Send as admin direct message to visitor
+      cancelVisitorFlow(visitorId);
+      storage.setBotPaused(visitorId, true);
+      const newMsg = storage.addMessage({
+        visitorId,
+        sender: 'admin',
+        type: actionType,
+        content: qr.content || '',
+        caption: qr.caption || '',
+        voiceDuration: qr.voiceDuration || (actionType === 'voice' ? 10 : 0),
+        timestamp: new Date().toISOString(),
+        status: 'delivered'
+      });
+      const visitor = storage.getVisitor(visitorId);
+      io.to(`visitor_${visitorId}`).emit('message:new', newMsg);
+      io.to('admin_room').emit('message:new', newMsg);
+      io.to('admin_room').emit('visitor:updated', visitor);
+    }
+  });
+
+  socket.on('admin:forward_message', ({ targetVisitorId, originalMessageId, type, content, caption, voiceDuration }) => {
+    if (!targetVisitorId) return;
+    const originalMsg = originalMessageId ? storage.messages.find(m => m.id === originalMessageId) : null;
+
+    const newMsg = storage.addMessage({
+      visitorId: targetVisitorId,
+      sender: 'admin',
+      type: originalMsg ? originalMsg.type : (type || 'text'),
+      content: originalMsg ? originalMsg.content : (content || ''),
+      caption: originalMsg ? originalMsg.caption : (caption || ''),
+      voiceDuration: originalMsg ? originalMsg.voiceDuration : (voiceDuration || 0),
+      isForwarded: true,
+      timestamp: new Date().toISOString(),
+      status: 'delivered'
+    });
+
+    const targetVis = storage.getVisitor(targetVisitorId);
+    io.to(`visitor_${targetVisitorId}`).emit('message:new', newMsg);
+    io.to('admin_room').emit('message:new', newMsg);
+    io.to('admin_room').emit('visitor:updated', targetVis);
   });
 
   // Disconnect handler

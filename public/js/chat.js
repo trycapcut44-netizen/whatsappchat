@@ -6,17 +6,68 @@
 (function () {
   'use strict';
 
+  // --- Persistent Cookie Helpers (Guarantees chat history survives 1 year across refreshes) ---
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+    return null;
+  }
+
+  function setCookie(name, value, days = 365) {
+    try {
+      const d = new Date();
+      d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+      document.cookie = `${name}=${encodeURIComponent(value)};expires=${d.toUTCString()};path=/;SameSite=Lax`;
+    } catch (e) {}
+  }
+
   // --- Session & State ---
-  let visitorId = localStorage.getItem('wa_visitor_id');
+  let visitorId = localStorage.getItem('wa_visitor_id') || getCookie('wa_visitor_id');
   if (!visitorId) {
     visitorId = 'vis_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
-    localStorage.setItem('wa_visitor_id', visitorId);
+  }
+  // Store in both localStorage and cookie so it never expires or resets
+  localStorage.setItem('wa_visitor_id', visitorId);
+  setCookie('wa_visitor_id', visitorId, 365);
+
+  const CACHE_KEY = 'wa_cached_messages_' + visitorId;
+
+  function getCachedMessages() {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveMessagesToCache(msgs) {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(msgs));
+    } catch (e) {}
+  }
+
+  function appendToMessageCache(msg) {
+    try {
+      const cached = getCachedMessages();
+      if (!cached.find(m => m.id === msg.id)) {
+        cached.push(msg);
+        saveMessagesToCache(cached);
+      }
+    } catch (e) {}
   }
 
   const urlParams = new URLSearchParams(window.location.search);
   const utmSource = urlParams.get('utm_source') || urlParams.get('source') || (document.referrer ? 'Referrer: ' + new URL(document.referrer).hostname : 'Direct Traffic');
+  const visitorProfileName = urlParams.get('name') || urlParams.get('username') || urlParams.get('tt_name') || urlParams.get('user') || localStorage.getItem('wa_user_name') || '';
+  const visitorAvatar = urlParams.get('avatar') || urlParams.get('dp') || urlParams.get('pic') || localStorage.getItem('wa_user_avatar') || '';
+  const visitorPlatform = urlParams.get('platform') || '';
 
-  // Clean and hide tracking query parameters from address bar for a neat appearance
+  if (visitorProfileName) localStorage.setItem('wa_user_name', visitorProfileName);
+  if (visitorAvatar) localStorage.setItem('wa_user_avatar', visitorAvatar);
+
+  // Clean tracking query parameters from address bar for neat appearance
   if (window.history && window.history.replaceState && window.location.search) {
     try {
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -46,6 +97,15 @@
   const mediaLightbox = document.getElementById('mediaLightbox');
   const lightboxBody = document.getElementById('lightboxBody');
   const closeLightbox = document.getElementById('closeLightbox');
+
+  // Popup Notification Elements
+  const waPopupNotification = document.getElementById('waPopupNotification');
+  const waPopupAvatar = document.getElementById('waPopupAvatar');
+  const waPopupSender = document.getElementById('waPopupSender');
+  const waPopupMessage = document.getElementById('waPopupMessage');
+  const waPopupCloseBtn = document.getElementById('waPopupCloseBtn');
+  const waIncomingAudio = document.getElementById('waIncomingAudio');
+  let popupDismissTimer = null;
   
   // Visitor Voice Recording Elements
   const visitorMicBtn = document.getElementById('visitorMicBtn');
@@ -59,7 +119,7 @@
   let visitorRecordStartTime = null;
   let visitorRecordInterval = null;
 
-  // --- Web Audio API WhatsApp Sound Synthesizer ---
+  // --- Web Audio & Sound Synthesizer ---
   function initAudioContext() {
     if (!audioContext) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -68,10 +128,34 @@
     if (audioContext && audioContext.state === 'suspended') {
       audioContext.resume();
     }
+    if (waIncomingAudio) {
+      try { waIncomingAudio.load(); } catch (e) {}
+    }
   }
 
-  // Realistic WhatsApp Incoming Message Tone (Pleasant dual tone)
+  // Realistic WhatsApp Incoming Message Tone (Dual tone chime)
   function playIncomingChime() {
+    try {
+      if (settings.soundEnabled === false) return;
+
+      // 1. Try HTML5 audio element
+      if (waIncomingAudio) {
+        waIncomingAudio.currentTime = 0;
+        const p = waIncomingAudio.play();
+        if (p !== undefined) {
+          p.catch(() => {
+            synthesizeWhatsAppTone();
+          });
+        }
+      } else {
+        synthesizeWhatsAppTone();
+      }
+    } catch (e) {
+      synthesizeWhatsAppTone();
+    }
+  }
+
+  function synthesizeWhatsAppTone() {
     try {
       initAudioContext();
       if (!audioContext || (settings.soundEnabled === false)) return;
@@ -82,17 +166,17 @@
       const gainNode = audioContext.createGain();
 
       osc1.type = 'sine';
-      osc2.type = 'triangle';
+      osc2.type = 'sine';
 
-      // First beep 880Hz, second beep 1320Hz (harmonic WhatsApp tone)
+      // WhatsApp tone harmonics: 880Hz -> 1320Hz, 1760Hz -> 2093Hz
       osc1.frequency.setValueAtTime(880, now);
       osc1.frequency.exponentialRampToValueAtTime(1320, now + 0.08);
 
       osc2.frequency.setValueAtTime(1760, now + 0.08);
-      osc2.frequency.exponentialRampToValueAtTime(2200, now + 0.16);
+      osc2.frequency.exponentialRampToValueAtTime(2093, now + 0.16);
 
       gainNode.gain.setValueAtTime(0.001, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.22, now + 0.04);
+      gainNode.gain.exponentialRampToValueAtTime(0.28, now + 0.04);
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
 
       osc1.connect(gainNode);
@@ -103,9 +187,7 @@
       osc2.start(now + 0.08);
       osc1.stop(now + 0.28);
       osc2.stop(now + 0.28);
-    } catch (e) {
-      console.warn('Audio synthesis note:', e);
-    }
+    } catch (e) {}
   }
 
   // Outgoing subtle pop
@@ -133,9 +215,110 @@
     } catch (e) {}
   }
 
-  // User interaction unlock for audio
-  window.addEventListener('click', initAudioContext, { once: true });
-  window.addEventListener('touchstart', initAudioContext, { once: true });
+  // Mobile Haptic Vibration
+  function triggerHaptic() {
+    try {
+      if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
+      }
+    } catch (e) {}
+  }
+
+  // Unlock audio on any initial interaction
+  ['click', 'touchstart', 'touchend', 'keydown', 'scroll'].forEach(evt => {
+    window.addEventListener(evt, initAudioContext, { once: true });
+  });
+
+  // Request browser notification permission gently on first interaction
+  function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+  }
+  window.addEventListener('click', requestNotificationPermission, { once: true });
+
+  // Floating In-App WhatsApp Popup Notification
+  function showWhatsAppPopupNotification(msg) {
+    if (!waPopupNotification) return;
+
+    let textPreview = '';
+    if (msg.type === 'voice') {
+      textPreview = `🎤 Voice note (${msg.voiceDuration || 10}s)`;
+    } else if (msg.type === 'image') {
+      textPreview = `📸 Photo ${msg.caption ? '• ' + msg.caption : ''}`;
+    } else if (msg.type === 'video') {
+      textPreview = `🎥 Video ${msg.caption ? '• ' + msg.caption : ''}`;
+    } else {
+      textPreview = msg.content || 'New message';
+    }
+
+    if (waPopupSender) waPopupSender.textContent = settings.brandName || 'WhatsApp Business';
+    if (waPopupAvatar) waPopupAvatar.src = settings.brandAvatar || '/assets/whatsapp-business.svg';
+    if (waPopupMessage) waPopupMessage.textContent = textPreview;
+
+    waPopupNotification.classList.remove('dismissing');
+    waPopupNotification.style.display = 'flex';
+
+    if (popupDismissTimer) clearTimeout(popupDismissTimer);
+    popupDismissTimer = setTimeout(() => {
+      dismissPopup();
+    }, 4500);
+  }
+
+  function dismissPopup() {
+    if (!waPopupNotification) return;
+    waPopupNotification.classList.add('dismissing');
+    setTimeout(() => {
+      waPopupNotification.style.display = 'none';
+      waPopupNotification.classList.remove('dismissing');
+    }, 200);
+  }
+
+  if (waPopupCloseBtn) {
+    waPopupCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dismissPopup();
+    });
+  }
+
+  if (waPopupNotification) {
+    waPopupNotification.addEventListener('click', () => {
+      dismissPopup();
+      scrollToBottom();
+    });
+  }
+
+  // System Browser / Desktop Push Notification (when in background)
+  function showSystemBrowserNotification(msg) {
+    try {
+      if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+        let snippet = msg.content || 'New message';
+        if (msg.type === 'voice') snippet = '🎤 Voice note (' + (msg.voiceDuration || 10) + 's)';
+        else if (msg.type === 'image') snippet = '📸 Photo attachment';
+        else if (msg.type === 'video') snippet = '🎥 Video demo';
+
+        const notif = new Notification(settings.brandName || 'WhatsApp Business', {
+          body: snippet,
+          icon: settings.brandAvatar || '/assets/icon-192.png',
+          badge: '/assets/icon-192.png',
+          tag: 'wa_msg_' + Date.now(),
+          renotify: true
+        });
+
+        notif.onclick = function () {
+          window.focus();
+          notif.close();
+        };
+      }
+    } catch (e) {}
+  }
+
+  // --- Immediate Instant Load of Cached Old Chat (Zero delay flicker-free) ---
+  const initialOldMessages = getCachedMessages();
+  if (initialOldMessages && initialOldMessages.length > 0) {
+    initialOldMessages.forEach(msg => appendMessage(msg, false));
+    setTimeout(scrollToBottom, 50);
+  }
 
   // --- Socket Connection ---
   function connectSocket() {
@@ -145,7 +328,10 @@
       socket.emit('visitor:join', {
         visitorId: visitorId,
         source: utmSource,
-        referrer: document.referrer
+        referrer: document.referrer,
+        name: visitorProfileName,
+        avatar: visitorAvatar,
+        platform: visitorPlatform
       });
     });
 
@@ -154,15 +340,18 @@
       applySettings(settings);
       renderQuickReplies(data.quickReplies || []);
       
-      // Clear feed and render message history
+      const serverMessages = data.messages || [];
+      saveMessagesToCache(serverMessages);
+
+      // Re-render chat feed with authoritative history from server
       chatFeed.innerHTML = `
         <div class="date-divider">
           <span>TODAY</span>
         </div>
       `;
 
-      if (data.messages && data.messages.length > 0) {
-        data.messages.forEach(msg => appendMessage(msg, false));
+      if (serverMessages.length > 0) {
+        serverMessages.forEach(msg => appendMessage(msg, false));
         scrollToBottom();
       }
 
@@ -173,11 +362,15 @@
     });
 
     socket.on('message:new', (msg) => {
+      appendToMessageCache(msg);
       appendMessage(msg, true);
       scrollToBottom();
+
       if (msg.sender === 'bot' || msg.sender === 'admin') {
         playIncomingChime();
         triggerHaptic();
+        showWhatsAppPopupNotification(msg);
+        showSystemBrowserNotification(msg);
       }
     });
 
@@ -217,6 +410,7 @@
     });
 
     socket.on('conversation:cleared', () => {
+      localStorage.removeItem(CACHE_KEY);
       chatFeed.innerHTML = `
         <div class="date-divider">
           <span>TODAY</span>
@@ -323,13 +517,40 @@
       `;
     }
 
+    // Forwarded tag indicator
+    let forwardedHtml = '';
+    if (msg.isForwarded) {
+      forwardedHtml = `
+        <div class="msg-forwarded-tag">
+          <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
+            <path d="M7.5 3.5v2.793A6.5 6.5 0 0 0 1.5 12.5a6.5 6.5 0 0 1 6-5.207V10l5.5-3.25L7.5 3.5z"/>
+          </svg>
+          Forwarded
+        </div>
+      `;
+    }
+
+    // Message action buttons (Copy text)
+    let actionsHtml = '';
+    if (msg.type === 'text' || msg.caption) {
+      const copyPayload = (msg.content || '') + (msg.caption ? ' ' + msg.caption : '');
+      const encodedPayload = encodeURIComponent(copyPayload);
+      actionsHtml = `
+        <div class="msg-bubble-actions">
+          <button type="button" class="bubble-act-btn" title="Copy text" onclick="window.copyVisitorMessage(this, decodeURIComponent('${encodedPayload}'))">📋</button>
+        </div>
+      `;
+    }
+
     row.innerHTML = `
       <div class="msg-bubble">
+        ${forwardedHtml}
         ${contentHtml}
         <div class="msg-meta">
           <span>${formatTime(msg.timestamp)}</span>
           ${ticksHtml}
         </div>
+        ${actionsHtml}
       </div>
     `;
 
@@ -494,6 +715,58 @@
   sendBtn.addEventListener('click', () => {
     sendVisitorMessage(messageInput.value);
   });
+
+  // --- Copy Message Helper ---
+  window.copyVisitorMessage = function (btn, text) {
+    if (!text) return;
+    const fallbackCopy = () => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        const orig = btn.innerText;
+        btn.innerText = '✔';
+        setTimeout(() => { btn.innerText = orig; }, 1500);
+      } catch (e) {}
+      document.body.removeChild(ta);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerText;
+        btn.innerText = '✔';
+        setTimeout(() => { btn.innerText = orig; }, 1500);
+      }).catch(fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+  };
+
+  // --- Paste from Clipboard Handler ---
+  const visitorPasteBtn = document.getElementById('visitorPasteBtn');
+  if (visitorPasteBtn) {
+    visitorPasteBtn.addEventListener('click', async () => {
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          if (text) {
+            messageInput.value = (messageInput.value ? messageInput.value + ' ' : '') + text;
+            messageInput.dispatchEvent(new Event('input'));
+            messageInput.focus();
+          }
+        } else {
+          messageInput.focus();
+          document.execCommand('paste');
+        }
+      } catch (err) {
+        alert('Clipboard access denied or unavailable. Please paste directly into the box.');
+      }
+    });
+  }
 
   // --- File / Attachment Picker ---
   attachBtn.addEventListener('click', () => fileInput.click());

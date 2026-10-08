@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": "qr_pic",
+    "label": "📸 Real Product Photos",
+    "actionType": "image",
+    "type": "image",
+    "content": "/uploads/file-1791404933496-954088728.jpeg",
+    "caption": "100% Original imported product photo ✨",
+    "delay": 2,
+    "order": 4
+  }
+]
