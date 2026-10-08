@@ -417,8 +417,8 @@
           timestamp: Date.now()
         },
         actions: [
-          { action: 'reply', title: '💬 Reply' },
-          { action: 'open', title: 'Open Chat' }
+          { action: 'reply', type: 'text', title: '💬 Reply', placeholder: 'Type your reply here...' },
+          { action: 'open', title: 'Open Full Chat' }
         ]
       };
 

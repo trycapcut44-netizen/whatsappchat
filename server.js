@@ -458,6 +458,39 @@ app.post('/api/visitors/:id/toggle-bot', requireAdminAuth, (req, res) => {
   res.json({ success: true, visitor });
 });
 
+// Direct reply endpoint from Mobile Notification inline action
+app.post('/api/visitor/reply-from-notification', (req, res) => {
+  const tenantId = req.tenantId || 'default';
+  const tenantStorage = storage.getTenant(tenantId);
+  const { visitorId, text } = req.body;
+  if (!visitorId || !text || !text.trim()) {
+    return res.status(400).json({ error: 'Missing visitorId or text' });
+  }
+
+  const cleanText = text.trim();
+  const newMsg = tenantStorage.addMessage({
+    visitorId,
+    sender: 'visitor',
+    type: 'text',
+    content: cleanText,
+    timestamp: new Date().toISOString(),
+    status: 'delivered'
+  });
+
+  const updatedVisitor = tenantStorage.getVisitor(visitorId);
+  if (updatedVisitor) {
+    tenantStorage.incrementUnread(visitorId);
+  }
+
+  io.to(`visitor_${tenantId}_${visitorId}`).emit('message:new', newMsg);
+  io.to(`admin_room_${tenantId}`).emit('message:new', newMsg);
+  if (updatedVisitor) {
+    io.to(`admin_room_${tenantId}`).emit('visitor:updated', updatedVisitor);
+  }
+
+  res.json({ success: true, message: newMsg });
+});
+
 // File Upload endpoint (Images, Videos, Voice notes, Avatars)
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) {

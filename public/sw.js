@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wa-business-cache-v4';
+const CACHE_NAME = 'wa-business-cache-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -71,9 +71,28 @@ self.addEventListener('notificationclick', (event) => {
   const notifData = event.notification.data || {};
   const targetUrl = notifData.url || '/';
 
+  // 1. If user used Android inline quick reply directly on the notification banner
+  if (event.action === 'reply' && event.reply) {
+    const replyText = (event.reply || '').trim();
+    if (replyText) {
+      event.waitUntil(
+        fetch('/api/visitor/reply-from-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            visitorId: notifData.msg ? notifData.msg.visitorId : null,
+            text: replyText
+          })
+        }).catch((err) => console.warn('Reply error:', err))
+      );
+      return;
+    }
+  }
+
+  // 2. Normal tap: Open or focus chat window and show interactive reply popup
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // 1. If an existing window/tab is open, focus it and tell it to show the reply popup
+      // If an existing window/tab is open, focus it and tell it to show the reply popup
       for (const client of clientList) {
         if ('focus' in client) {
           return client.focus().then((focusedClient) => {
@@ -87,7 +106,7 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
 
-      // 2. If no window is currently open, open a new window with open_reply=true flag
+      // If no window is currently open, open a new window with open_reply=true flag
       if (self.clients.openWindow) {
         const separator = targetUrl.includes('?') ? '&' : '?';
         return self.clients.openWindow(`${targetUrl}${separator}open_reply=true`);
