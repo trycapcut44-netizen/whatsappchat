@@ -830,7 +830,7 @@ app.get('/admin', requireAdminAuth, (req, res) => {
 });
 
 // Start Server
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n======================================================`);
   console.log(`🚀 WHATSAPP LIVE CHAT & SALES FUNNEL MULTI-TENANT SYSTEM`);
   console.log(`💬 Visitor Landing Page : http://localhost:${PORT}`);
